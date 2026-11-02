@@ -52,6 +52,7 @@ function sourcesay_register_routes() {
 		'/admin/setup-done'  => array( WP_REST_Server::CREATABLE, 'sourcesay_rest_setup_done' ),
 		'/admin/test-order'  => array( WP_REST_Server::CREATABLE, 'sourcesay_rest_test_order' ),
 		'/admin/test-orders' => array( WP_REST_Server::DELETABLE, 'sourcesay_rest_delete_test_orders' ),
+		'/admin/dismiss'     => array( WP_REST_Server::CREATABLE, 'sourcesay_rest_dismiss' ),
 	);
 	foreach ( $admin_routes as $route => $def ) {
 		register_rest_route(
@@ -416,4 +417,43 @@ function sourcesay_delete_test_orders() {
  */
 function sourcesay_rest_delete_test_orders() {
 	return new WP_REST_Response( array( 'deleted' => sourcesay_delete_test_orders() ) );
+}
+
+/**
+ * Dismissible notices/cards the current user can hide (key => days hidden).
+ *
+ * @return int[]
+ */
+function sourcesay_dismissible() {
+	return array( 'pro_card' => 90 );
+}
+
+/**
+ * Whether a dismissible item is hidden for the current user.
+ *
+ * @param string $key Item key.
+ * @return bool
+ */
+function sourcesay_is_dismissed( $key ) {
+	$items = sourcesay_dismissible();
+	if ( ! isset( $items[ $key ] ) ) {
+		return false;
+	}
+	$at = (int) get_user_meta( get_current_user_id(), 'sourcesay_dismissed_' . $key, true );
+	return $at && ( time() - $at ) < $items[ $key ] * DAY_IN_SECONDS;
+}
+
+/**
+ * POST dismiss: hide a card for the current user for a while.
+ *
+ * @param WP_REST_Request $req Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function sourcesay_rest_dismiss( $req ) {
+	$key = sanitize_key( (string) $req->get_param( 'key' ) );
+	if ( ! isset( sourcesay_dismissible()[ $key ] ) ) {
+		return new WP_Error( 'sourcesay_bad_key', __( 'Unknown item.', 'sourcesay' ), array( 'status' => 400 ) );
+	}
+	update_user_meta( get_current_user_id(), 'sourcesay_dismissed_' . $key, time() );
+	return new WP_REST_Response( array( 'ok' => true ) );
 }

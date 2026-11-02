@@ -1233,6 +1233,56 @@
 		) );
 		body.appendChild( toldCard( rep ) );
 		body.appendChild( el( 'section', { class: 'ss-card' }, howToRead() ) );
+		const promo = proCard();
+		if ( promo ) {
+			body.appendChild( promo );
+		}
+	}
+
+	/* SourceSay Pro card: Reports only, dismissible, hidden when Pro is active (server sets promo.show). */
+	function proCard() {
+		const p = cfg.promo || {};
+		const url = String( p.proUrl || '' );
+		if ( ! p.show || ! /^https:\/\//.test( url ) ) {
+			return null;
+		}
+		const row = ( icon, title, text ) => el( 'li', { class: 'ss-pro__item' },
+			el( 'span', { class: 'ss-pro__icon' }, ico( icon ) ),
+			el( 'span', { class: 'ss-pro__text' }, el( 'strong', { text: title } ), ' ' + text )
+		);
+		const card = el( 'section', { class: 'ss-card ss-pro', 'aria-labelledby': 'ss-pro-title' },
+			el( 'div', { class: 'ss-pro__intro' },
+				el( 'p', { class: 'ss-pro__eyebrow' }, ico( 'sparkle' ), __( 'SourceSay Pro', 'sourcesay' ) ),
+				el( 'h2', { class: 'ss-pro__title', id: 'ss-pro-title', text: __( 'Turn answers into decisions', 'sourcesay' ) } )
+			),
+			el( 'ul', { class: 'ss-pro__list' },
+				row( 'chat', __( 'Ask more.', 'sourcesay' ), __( 'Follow-up questions, NPS and star ratings, with smart branching.', 'sourcesay' ) ),
+				row( 'eye', __( 'See what your analytics miss.', 'sourcesay' ), __( 'What customers said, side by side with what WooCommerce tracked.', 'sourcesay' ) ),
+				row( 'revenue', __( 'Know which channels bring repeat buyers.', 'sourcesay' ), __( 'Lifetime value for every channel.', 'sourcesay' ) ),
+				row( 'send', __( 'Send answers where you work.', 'sourcesay' ), __( 'GA4, Meta, Klaviyo and FluentCRM.', 'sourcesay' ) ),
+				row( 'palette', __( 'Client-ready reports.', 'sourcesay' ), __( 'With your own branding.', 'sourcesay' ) )
+			),
+			el( 'div', { class: 'ss-pro__foot' },
+				el( 'p', { class: 'ss-pro__free', text: __( 'Everything you use today stays free, with unlimited answers.', 'sourcesay' ) } ),
+				el( 'div', { class: 'ss-pro__actions' },
+					el( 'a', { class: 'ss-btn ss-btn--primary', href: url, target: '_blank', rel: 'noopener' }, __( 'See SourceSay Pro', 'sourcesay' ), ico( 'external' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
+					el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary', text: __( 'Not now', 'sourcesay' ), on: { click: () => dismissPro( card ) } } )
+				)
+			)
+		);
+		return card;
+	}
+
+	function dismissPro( card ) {
+		cfg.promo.show = false;
+		const prev = card.previousElementSibling;
+		card.remove();
+		const sum = prev && prev.querySelector( 'summary' );
+		if ( sum ) {
+			sum.focus();
+		}
+		toast( 'info', __( 'Hidden for 90 days', 'sourcesay' ) );
+		api( '/admin/dismiss', { method: 'POST', data: { key: 'pro_card' } } ).catch( ( err ) => toast( 'error', errText( err ) ) );
 	}
 
 	function customRange() {

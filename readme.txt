@@ -39,6 +39,10 @@ The survey appears on the order confirmation page (and, optionally, on the order
 * Multi-currency stores: revenue is reported in your store currency (Aelia, WooPayments Multi-Currency, CURCY and WPML/WooCommerce Multilingual rates are used when present).
 * WPML and Polylang: question, answers, follow-ups and thank-you text can be translated.
 
+= SourceSay Pro =
+
+Everything above is free, with unlimited responses. SourceSay Pro is an optional add-on for stores that want more: multi-question surveys with branching and NPS, a report that compares what customers said with what WooCommerce tracked, lifetime value by channel, and sending answers to GA4, Meta, Klaviyo and FluentCRM. Learn more at https://swiftwebdev.com/sourcesay-pro/
+
 == Installation ==
 
 1. Install and activate WooCommerce.
