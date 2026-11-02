@@ -25,9 +25,9 @@ define( 'SOURCESAY_VERSION', '1.0.0' );
 define( 'SOURCESAY_FILE', __FILE__ );
 define( 'SOURCESAY_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SOURCESAY_URL', plugin_dir_url( __FILE__ ) );
-define( 'SOURCESAY_DB_VERSION', 1 );
+define( 'SOURCESAY_DB_VERSION', 2 );
 
-foreach ( array( 'install', 'settings', 'responses', 'frontend', 'rest', 'reports', 'export', 'admin', 'orders-ui', 'privacy', 'cron' ) as $sourcesay_file ) {
+foreach ( array( 'install', 'settings', 'responses', 'frontend', 'rest', 'reports', 'export', 'admin', 'orders-ui', 'privacy', 'cron', 'shortcode', 'dashboard-widget', 'customer', 'multilingual', 'currency' ) as $sourcesay_file ) {
 	require_once SOURCESAY_PATH . 'includes/' . $sourcesay_file . '.php';
 }
 unset( $sourcesay_file );
@@ -50,4 +50,15 @@ add_action(
 	}
 );
 
-add_action( 'plugins_loaded', 'sourcesay_maybe_upgrade' );
+add_action( 'init', 'sourcesay_maybe_upgrade', 5 );
+
+/**
+ * Asset version: plugin version plus the file's modified time, so browsers never keep a stale copy.
+ *
+ * @param string $rel Path relative to the plugin folder.
+ * @return string
+ */
+function sourcesay_asset_version( $rel ) {
+	$file = SOURCESAY_PATH . $rel;
+	return file_exists( $file ) ? SOURCESAY_VERSION . '.' . filemtime( $file ) : SOURCESAY_VERSION;
+}

@@ -39,6 +39,7 @@ function sourcesay_create_table() {
 	followup_text text NULL,
 	other_text text NULL,
 	order_total decimal(19,4) NOT NULL DEFAULT 0,
+	order_total_base decimal(19,4) NOT NULL DEFAULT 0,
 	order_currency char(3) NOT NULL DEFAULT '',
 	order_status varchar(32) NOT NULL DEFAULT '',
 	order_created datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -87,7 +88,34 @@ function sourcesay_deactivate() {
  * @return void
  */
 function sourcesay_maybe_upgrade() {
-	if ( (int) get_option( 'sourcesay_db_version', 0 ) < SOURCESAY_DB_VERSION ) {
+	$stored = (int) get_option( 'sourcesay_db_version', 0 );
+	if ( $stored < SOURCESAY_DB_VERSION ) {
 		sourcesay_create_table();
+		if ( $stored > 0 && $stored < 2 ) {
+			sourcesay_backfill_base_totals();
+		}
+	}
+}
+
+/**
+ * DB version 2: fill order_total_base for rows saved before the column existed.
+ *
+ * @return void
+ */
+function sourcesay_backfill_base_totals() {
+	global $wpdb;
+	$table = sourcesay_table();
+	$base  = sourcesay_cut( (string) get_option( 'woocommerce_currency', '' ), 3 );
+	// Same currency (or unknown): base = total.
+	$wpdb->query( $wpdb->prepare( 'UPDATE %i SET order_total_base = order_total WHERE order_total_base = 0 AND (order_currency = %s OR order_currency = %s)', $table, $base, '' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// Other currencies need the order meta; ponytail: first 2000 rows, later rows are filled when their order syncs.
+	if ( ! function_exists( 'wc_get_order' ) ) {
+		return;
+	}
+	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT order_id, order_total FROM %i WHERE order_total_base = 0 AND order_total <> 0 LIMIT 2000', $table ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	foreach ( $rows as $r ) {
+		$order = wc_get_order( (int) $r['order_id'] );
+		$value = $order ? sourcesay_order_total_base( $order, (float) $r['order_total'] ) : (float) $r['order_total'];
+		$wpdb->update( $table, array( 'order_total_base' => $value ), array( 'order_id' => (int) $r['order_id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 }

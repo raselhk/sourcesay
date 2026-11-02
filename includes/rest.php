@@ -105,7 +105,7 @@ function sourcesay_rest_response( $request ) {
 	$ok       = new WP_REST_Response(
 		array(
 			'ok'      => true,
-			'message' => $settings['thank_you'],
+			'message' => sourcesay_t( 'thank_you', $settings['thank_you'] ),
 		),
 		200
 	);
@@ -132,9 +132,10 @@ function sourcesay_rest_response( $request ) {
 function sourcesay_rest_get_settings() {
 	return new WP_REST_Response(
 		array(
-			'settings' => sourcesay_get_settings(),
-			'presets'  => sourcesay_presets(),
-			'icons'    => sourcesay_icon_keys(),
+			'settings'    => sourcesay_get_settings(),
+			'presets'     => sourcesay_presets(),
+			'icons'       => sourcesay_icon_keys(),
+			'icon_groups' => sourcesay_icon_groups(),
 		)
 	);
 }
@@ -197,7 +198,7 @@ function sourcesay_get_status() {
 	if ( empty( $settings['enabled'] ) ) {
 		$problems[] = array(
 			'code'    => 'disabled',
-			'message' => __( 'The survey is switched off, so customers will not see it. Fix: open the Survey tab and turn on "Show the survey after checkout".', 'sourcesay' ),
+			'message' => __( 'Your survey is turned off, so customers do not see it yet. Check your question, then turn it on. Test orders always show it, so you can try it first.', 'sourcesay' ),
 		);
 	}
 	$enabled_options = 0;
@@ -234,6 +235,25 @@ function sourcesay_get_status() {
 		}
 	}
 
+	// Funnel builders replace the WooCommerce thank-you page, so the automatic placement never runs there.
+	$funnels = array(
+		'funnel-builder/' => 'FunnelKit',
+		'cartflows/'      => 'CartFlows',
+	);
+	$all     = array_merge( $active, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+	foreach ( $funnels as $prefix => $name ) {
+		foreach ( $all as $plugin_file ) {
+			if ( is_string( $plugin_file ) && 0 === strpos( $plugin_file, $prefix ) ) {
+				$problems[] = array(
+					'code'    => 'custom_thankyou',
+					/* translators: %s: funnel plugin name. */
+					'message' => sprintf( __( 'Your store uses %s thank-you pages. Add the SourceSay block or [sourcesay] shortcode to them.', 'sourcesay' ), $name ),
+				);
+				break 2;
+			}
+		}
+	}
+
 	$checkout_type = 'unknown';
 	$page_id       = function_exists( 'wc_get_page_id' ) ? wc_get_page_id( 'checkout' ) : 0;
 	$content       = $page_id > 0 ? (string) get_post_field( 'post_content', $page_id ) : '';
@@ -246,8 +266,8 @@ function sourcesay_get_status() {
 	}
 
 	$table = sourcesay_table();
-	$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-	$last  = $wpdb->get_var( "SELECT MAX(created_at) FROM {$table} WHERE is_test = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+	$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 0 AND answer_id <> '__skip'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+	$last  = $wpdb->get_var( "SELECT MAX(created_at) FROM {$table} WHERE is_test = 0 AND answer_id <> '__skip'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 	$tresp = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 	$rep   = sourcesay_get_report();
 	$tests = wc_get_orders(
@@ -262,18 +282,19 @@ function sourcesay_get_status() {
 	);
 
 	return array(
-		'survey_live'       => empty( $problems ) || ! array_diff( wp_list_pluck( $problems, 'code' ), array( 'caching_plugin' ) ),
-		'problems'          => $problems,
-		'checkout_type'     => $checkout_type,
-		'theme'             => wp_get_theme()->get( 'Name' ),
-		'caching_plugin'    => $caching,
-		'responses_total'   => $total,
-		'last_response_at'  => $last ? wp_date( 'c', strtotime( $last . ' UTC' ) ) : null,
-		'paid_orders_30d'   => $rep['totals']['paid_orders'],
-		'response_rate_30d' => $rep['totals']['response_rate'],
-		'setup_done'        => (bool) get_option( 'sourcesay_setup_done', 0 ),
-		'test_orders'       => (int) $tests->total,
-		'test_responses'    => $tresp,
+		'survey_live'        => empty( $problems ) || ! array_diff( wp_list_pluck( $problems, 'code' ), array( 'caching_plugin', 'custom_thankyou' ) ),
+		'problems'           => $problems,
+		'checkout_type'      => $checkout_type,
+		'theme'              => wp_get_theme()->get( 'Name' ),
+		'caching_plugin'     => $caching,
+		'responses_total'    => $total,
+		'last_response_at'   => $last ? wp_date( 'c', strtotime( $last . ' UTC' ) ) : null,
+		'paid_orders_30d'    => $rep['totals']['paid_orders'],
+		'response_rate_30d'  => $rep['totals']['response_rate'],
+		'setup_done'         => (bool) get_option( 'sourcesay_setup_done', 0 ),
+		'test_orders'        => (int) $tests->total,
+		'test_responses'     => $tresp,
+		'translation_plugin' => sourcesay_translation_plugin(),
 	);
 }
 

@@ -26,4 +26,6 @@ if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $sourcesay_hpos_meta
 delete_option( 'sourcesay_settings' );
 delete_option( 'sourcesay_db_version' );
 delete_option( 'sourcesay_cache_v' );
+delete_option( 'sourcesay_setup_done' );
+delete_option( 'sourcesay_i18n_hash' );
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_sourcesay\_%' OR option_name LIKE '\_transient\_timeout\_sourcesay\_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

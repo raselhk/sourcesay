@@ -30,6 +30,14 @@ The survey appears on the order confirmation page (and, optionally, on the order
 * Works without JavaScript, includes a honeypot and rate limiting.
 * HPOS (high-performance order storage) compatible.
 * Personal data exporter and eraser, optional automatic data retention.
+* Shortcode `[sourcesay]` and a "SourceSay survey" block for custom thank-you pages (FunnelKit, CartFlows, Elementor, Bricks).
+* "Prefer not to say" button. Skips are counted but never mixed into your answers or revenue.
+* New customers only: skip the survey for people who ordered before.
+* Reports compare with the previous period of the same length.
+* Dashboard widget with your top five channels from the last 30 days.
+* Private order note ("Customer said: Instagram"), orders list search by answer, and a "How they found you" section on customer profiles.
+* Multi-currency stores: revenue is reported in your store currency (Aelia, WooPayments Multi-Currency, CURCY and WPML/WooCommerce Multilingual rates are used when present).
+* WPML and Polylang: question, answers, follow-ups and thank-you text can be translated.
 
 == Installation ==
 
@@ -46,6 +54,34 @@ On the order confirmation page, before or after the order details. It can also a
 = Does it slow down my checkout? =
 
 No. The survey is shown after the order is placed, and its small script and stylesheet load only on the order confirmation and view-order pages.
+
+= My store uses FunnelKit or CartFlows. How do I show the survey? =
+
+Those plugins replace the WooCommerce thank-you page, so add the "SourceSay survey" block (or the `[sourcesay]` shortcode) to your funnel's thank-you step. SourceSay reads the order from the page address (`order_id`, `order`, `wcf-order` and `key`, `order_key`, `wcf-key`), and the order key must match. Set Placement to "Only where I add the block or shortcode" on the Survey tab if you do not want the automatic placement as well. The survey is shown only once per page.
+
+= Can customers skip the question? =
+
+Yes, by default. A "Prefer not to say" button saves a skip so the survey is not shown again. Skips appear as a separate number in the report and never count as answers. Turn it off, or change the button text, on the Survey tab.
+
+= Can I ask only new customers? =
+
+Yes. Set Audience to "New customers only". Customers who already had a paid order are not asked. Test orders always show the survey.
+
+= Where is the dashboard widget? =
+
+On the WordPress Dashboard for users who can manage WooCommerce: top five channels, answers, revenue and response rate for the last 30 days.
+
+= Do I see the answer in order emails? =
+
+Yes, in emails sent to you after the customer answered, and always as a private note on the order. The "New order" email is sent before the customer reaches the thank-you page, so it cannot contain the answer. Open the order or the note to see it.
+
+= How do I search orders by answer? =
+
+On the orders screen choose "How they found you" in the search dropdown (WooCommerce high-performance order storage), or just search on stores that use the classic orders screen.
+
+= Does it work with multi-currency or translation plugins? =
+
+Yes. Orders paid in another currency are converted to your store currency using the rate saved by Aelia, WooPayments Multi-Currency, CURCY or WPML when it exists (developers can use the `sourcesay_order_total_base` filter). With WPML or Polylang, translate SourceSay strings under String Translation (WPML) or Languages > Translations (Polylang), group "SourceSay".
 
 = Can customers answer twice? =
 
@@ -74,4 +110,4 @@ SourceSay stores the customer's answer, the optional follow-up and "Other" text,
 == Changelog ==
 
 = 1.0.0 =
-* Initial release.
+* Initial release, including the shortcode and block, skip button, new-customers-only audience, previous-period comparison, dashboard widget, order notes and search, multi-currency totals and WPML/Polylang support.

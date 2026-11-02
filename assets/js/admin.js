@@ -20,32 +20,126 @@
 	const LOCALE = document.documentElement.lang || undefined;
 	const SVGNS = 'http://www.w3.org/2000/svg';
 
-	const ICON_KEYS = [ 'google', 'instagram', 'facebook', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'x', 'reddit', 'users', 'microphone', 'star', 'envelope', 'article', 'megaphone', 'storefront', 'map-pin', 'newspaper', 'radio', 'calendar', 'chat', 'tag', 'globe', 'question' ];
+	/* Fallback icon library (mirrors sourcesay_icon_groups()); the server list wins when it loads. */
+	const ICON_GROUPS = {
+		social: { label: __( 'Social media', 'sourcesay' ), icons: [ 'instagram', 'facebook', 'tiktok', 'x', 'threads', 'bluesky', 'snapchat', 'pinterest', 'linkedin', 'reddit', 'tumblr', 'mastodon' ] },
+		search: { label: __( 'Search and AI', 'sourcesay' ), icons: [ 'google', 'ai', 'robot', 'globe' ] },
+		media: { label: __( 'Video and audio', 'sourcesay' ), icons: [ 'youtube', 'twitch', 'vimeo', 'spotify', 'apple-podcasts', 'soundcloud', 'microphone', 'television', 'radio' ] },
+		messaging: { label: __( 'Messaging and community', 'sourcesay' ), icons: [ 'whatsapp', 'messenger', 'telegram', 'discord', 'wechat', 'slack', 'chat', 'users', 'community', 'referral' ] },
+		shopping: { label: __( 'Marketplaces, apps and reviews', 'sourcesay' ), icons: [ 'amazon', 'etsy', 'marketplace', 'app-store', 'google-play', 'yelp', 'tripadvisor' ] },
+		content: { label: __( 'Email and content', 'sourcesay' ), icons: [ 'envelope', 'article', 'newspaper', 'medium', 'substack', 'github', 'dribbble', 'behance' ] },
+		offline: { label: __( 'Offline and local', 'sourcesay' ), icons: [ 'storefront', 'map-pin', 'car', 'print', 'qr-code', 'event', 'calendar', 'gift', 'phone', 'award' ] },
+		general: { label: __( 'General', 'sourcesay' ), icons: [ 'star', 'megaphone', 'tag', 'question' ] },
+	};
+	const ICON_KEYS = Object.keys( ICON_GROUPS ).reduce( ( all, g ) => all.concat( ICON_GROUPS[ g ].icons ), [] );
 	const ICON_LABELS = {
-		google: 'Google',
 		instagram: 'Instagram',
 		facebook: 'Facebook',
 		tiktok: 'TikTok',
-		youtube: 'YouTube',
+		x: __( 'X (Twitter)', 'sourcesay' ),
+		threads: 'Threads',
+		bluesky: 'Bluesky',
+		snapchat: 'Snapchat',
 		pinterest: 'Pinterest',
 		linkedin: 'LinkedIn',
-		x: 'X',
 		reddit: 'Reddit',
-		users: __( 'People', 'sourcesay' ),
-		microphone: __( 'Microphone', 'sourcesay' ),
-		star: __( 'Star', 'sourcesay' ),
-		envelope: __( 'Envelope', 'sourcesay' ),
-		article: __( 'Article', 'sourcesay' ),
-		megaphone: __( 'Megaphone', 'sourcesay' ),
-		storefront: __( 'Storefront', 'sourcesay' ),
-		'map-pin': __( 'Map pin', 'sourcesay' ),
-		newspaper: __( 'Newspaper', 'sourcesay' ),
+		tumblr: 'Tumblr',
+		mastodon: 'Mastodon',
+		google: 'Google',
+		ai: __( 'AI assistant', 'sourcesay' ),
+		robot: __( 'Chatbot', 'sourcesay' ),
+		globe: __( 'Website', 'sourcesay' ),
+		youtube: 'YouTube',
+		twitch: 'Twitch',
+		vimeo: 'Vimeo',
+		spotify: 'Spotify',
+		'apple-podcasts': 'Apple Podcasts',
+		soundcloud: 'SoundCloud',
+		microphone: __( 'Podcast microphone', 'sourcesay' ),
+		television: __( 'TV', 'sourcesay' ),
 		radio: __( 'Radio', 'sourcesay' ),
-		calendar: __( 'Calendar', 'sourcesay' ),
+		whatsapp: 'WhatsApp',
+		messenger: 'Messenger',
+		telegram: 'Telegram',
+		discord: 'Discord',
+		wechat: 'WeChat',
+		slack: 'Slack',
 		chat: __( 'Chat', 'sourcesay' ),
+		users: __( 'Friends and family', 'sourcesay' ),
+		community: __( 'Community or group', 'sourcesay' ),
+		referral: __( 'Referral', 'sourcesay' ),
+		amazon: 'Amazon',
+		etsy: 'Etsy',
+		marketplace: __( 'Marketplace', 'sourcesay' ),
+		'app-store': 'App Store',
+		'google-play': 'Google Play',
+		yelp: 'Yelp',
+		tripadvisor: 'Tripadvisor',
+		envelope: __( 'Email', 'sourcesay' ),
+		article: __( 'Blog or article', 'sourcesay' ),
+		newspaper: __( 'Newspaper or magazine', 'sourcesay' ),
+		medium: 'Medium',
+		substack: 'Substack',
+		github: 'GitHub',
+		dribbble: 'Dribbble',
+		behance: 'Behance',
+		storefront: __( 'Shop or storefront', 'sourcesay' ),
+		'map-pin': __( 'Map or location', 'sourcesay' ),
+		car: __( 'Drove by', 'sourcesay' ),
+		print: __( 'Print or flyer', 'sourcesay' ),
+		'qr-code': __( 'QR code', 'sourcesay' ),
+		event: __( 'Event or ticket', 'sourcesay' ),
+		calendar: __( 'Calendar', 'sourcesay' ),
+		gift: __( 'Gift', 'sourcesay' ),
+		phone: __( 'Phone call', 'sourcesay' ),
+		award: __( 'Award', 'sourcesay' ),
+		star: __( 'Star or influencer', 'sourcesay' ),
+		megaphone: __( 'Ad or promotion', 'sourcesay' ),
 		tag: __( 'Tag', 'sourcesay' ),
-		globe: __( 'Globe', 'sourcesay' ),
 		question: __( 'Question mark', 'sourcesay' ),
+	};
+	/* Extra search words (not shown). English brand and channel words people type. */
+	const ICON_WORDS = {
+		x: 'twitter tweet',
+		instagram: 'insta ig reels',
+		facebook: 'fb meta',
+		tiktok: 'video short',
+		snapchat: 'snap',
+		youtube: 'video channel',
+		twitch: 'video stream live gaming',
+		vimeo: 'video',
+		ai: 'chatgpt openai perplexity gemini claude copilot sparkle',
+		robot: 'bot ai assistant',
+		globe: 'web internet online browser',
+		google: 'search maps seo',
+		microphone: 'podcast audio',
+		'apple-podcasts': 'podcast itunes',
+		spotify: 'podcast music',
+		soundcloud: 'music audio',
+		television: 'tv commercial ad',
+		radio: 'fm audio ad',
+		messenger: 'facebook chat',
+		chat: 'message conversation',
+		users: 'friend family word mouth people',
+		community: 'group forum club people',
+		referral: 'handshake partner colleague recommend word mouth',
+		marketplace: 'shopping bag store',
+		envelope: 'email newsletter mail',
+		article: 'blog post review',
+		newspaper: 'press magazine news print',
+		storefront: 'store shop walk local',
+		'map-pin': 'maps location local directions',
+		car: 'drive road billboard',
+		print: 'printer flyer poster brochure leaflet',
+		'qr-code': 'scan code',
+		event: 'ticket trade show conference fair',
+		gift: 'present voucher coupon',
+		phone: 'call telephone sales',
+		award: 'trophy prize winner',
+		star: 'influencer creator celebrity favourite',
+		megaphone: 'advert advertising promo campaign',
+		tag: 'label sale discount',
+		question: 'other unknown',
 	};
 	const PRESET_LABELS = {
 		general: __( 'General store', 'sourcesay' ),
@@ -68,6 +162,7 @@
 		draft: null,
 		presets: {},
 		icons: ICON_KEYS,
+		iconGroups: ICON_GROUPS,
 		settingsState: 'loading',
 		settingsErr: null,
 		report: null,
@@ -90,7 +185,7 @@
 		statusState: 'loading',
 		statusErr: null,
 		setupOpen: false,
-		setup: { step: 1, preset: 'general', test: 'idle', url: '', base: null, timer: 0, started: 0 },
+		setup: { step: 1, preset: 'general', test: 'idle', url: '', base: null, timer: 0, started: 0, live: false },
 	};
 	const R = {}; // Live DOM references for the current tab.
 
@@ -329,7 +424,7 @@
 		const local = [ opt( 'google', 'Google search or Maps', 'google' ) ].concat( pick( [ 'friend', 'facebook', 'instagram' ] ), [ opt( 'walk', 'Walked or drove by', 'storefront' ), opt( 'flyer', 'Flyer or print', 'newspaper' ), opt( 'radio', 'Radio or TV', 'radio' ) ] );
 		return {
 			settings: {
-				enabled: true,
+				enabled: false,
 				question: 'How did you hear about us?',
 				options: clone( general ),
 				other: { enabled: true, label: 'Other', placeholder: 'Tell us where' },
@@ -358,7 +453,7 @@
 					const s = mockStore.settings;
 					const problems = [];
 					if ( ! s.enabled ) {
-						problems.push( { code: 'survey_disabled', message: 'The survey is turned off.' } );
+						problems.push( { code: 'disabled', message: 'The survey is off and not live yet. Only test orders show it.' } );
 					} else if ( ! s.options.some( ( o ) => o.enabled ) ) {
 						problems.push( { code: 'no_options', message: 'No answers are switched on.' } );
 					}
@@ -402,7 +497,7 @@
 					if ( method === 'POST' ) {
 						mockStore.settings = clone( opts.data.settings );
 					}
-					resolve( { settings: clone( mockStore.settings ), presets: clone( mockStore.presets ), icons: ICON_KEYS.slice() } );
+					resolve( { settings: clone( mockStore.settings ), presets: clone( mockStore.presets ), icons: ICON_KEYS.slice(), icon_groups: clone( ICON_GROUPS ) } );
 					return;
 				}
 				const q = new URLSearchParams( path.split( '?' )[ 1 ] || '' );
@@ -1153,6 +1248,32 @@
 
 	function reportEmpty( t ) {
 		const paid = +t.paid_orders || 0;
+		const off = surveyOff();
+		if ( off ) {
+			const on = el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: ( e ) => {
+				turnOn( e.currentTarget ).then( ( ok ) => {
+					if ( ok ) {
+						toast( 'success', __( 'Your survey is on. Customers will see it after their next order.', 'sourcesay' ) );
+					}
+				} );
+			} } }, ico( 'check' ), __( 'Turn on survey', 'sourcesay' ) );
+			return el( 'div', { class: 'ss-card' },
+				el( 'div', { class: 'ss-empty' },
+					el( 'span', { class: 'ss-empty__icon' }, ico( 'responses' ) ),
+					el( 'h2', { class: 'ss-empty__title', text: __( 'Turn on your survey to start collecting answers', 'sourcesay' ) } ),
+					el( 'p', { class: 'ss-empty__text', text: __( 'Your survey is off, so customers are not asked yet. Turn it on first. Answers show up here as soon as customers reply after checkout.', 'sourcesay' ) } ),
+					el( 'ol', { class: 'ss-steps' },
+						el( 'li', { text: __( 'Turn on the survey.', 'sourcesay' ) } ),
+						el( 'li', { text: __( 'Customers see the question on the order confirmation page after their next order.', 'sourcesay' ) } ),
+						el( 'li', { text: __( 'Come back here. Answers appear once orders are paid (Processing or Completed).', 'sourcesay' ) } )
+					),
+					el( 'div', { class: 'ss-empty__actions' },
+						on,
+						el( 'a', { class: 'ss-btn ss-btn--secondary', href: '#survey' }, ico( 'eye' ), __( 'Preview the survey', 'sourcesay' ) )
+					)
+				)
+			);
+		}
 		const text = paid
 			? sprintf( /* translators: %s: number of paid orders */ _n( 'There was %s paid order in this range, but nobody has answered yet.', 'There were %s paid orders in this range, but nobody has answered yet.', paid, 'sourcesay' ), fmtNum( paid ) )
 			: __( 'Answers show up here as soon as customers reply on the order confirmation page. No numbers are shown until real answers arrive.', 'sourcesay' );
@@ -1162,7 +1283,6 @@
 				el( 'h2', { class: 'ss-empty__title', text: __( 'No answers yet', 'sourcesay' ) } ),
 				el( 'p', { class: 'ss-empty__text', text } ),
 				el( 'ol', { class: 'ss-steps' },
-					el( 'li', { text: __( 'Check that the survey is turned on in the Survey tab.', 'sourcesay' ) } ),
 					el( 'li', { text: __( 'Place a test order in your store, for example with the Cash on delivery or Check payments method.', 'sourcesay' ) } ),
 					el( 'li', { text: __( 'Answer the question on the order confirmation page.', 'sourcesay' ) } ),
 					el( 'li', { text: __( 'Come back here. The answer appears once the order is paid (Processing or Completed).', 'sourcesay' ) } )
@@ -1375,6 +1495,98 @@
 		render( true );
 	}
 
+	function runSetupAgain() {
+		clearInterval( S.setup.timer );
+		S.setupOpen = true;
+		S.setup = { step: 1, preset: S.setup.preset, test: 'idle', url: '', base: null, timer: 0, started: 0, live: false, fromStatus: false };
+		render( true );
+	}
+
+	const isOffProblem = ( p ) => /disabl/.test( String( ( p && p.code ) || '' ) );
+
+	/** True when the owner has not switched the survey on yet (saved setting, or the status check says so). */
+	function surveyOff() {
+		if ( S.saved ) {
+			return ! S.saved.enabled;
+		}
+		return !! ( S.status && ( S.status.problems || [] ).some( isOffProblem ) );
+	}
+
+	/**
+	 * Switch the survey on: saves the stored settings with enabled=true (unsaved edits elsewhere stay as a draft).
+	 *
+	 * @return {Promise<boolean>}
+	 */
+	function turnOn( btn ) {
+		if ( btn ) {
+			btn.classList.add( 'is-busy' );
+			btn.disabled = true;
+		}
+		const done = ( ok ) => {
+			if ( btn ) {
+				btn.classList.remove( 'is-busy' );
+				btn.disabled = false;
+			}
+			return ok;
+		};
+		const ready = S.saved ? Promise.resolve( S.saved ) : api( '/admin/settings' ).then( ( r ) => r.settings );
+		return ready.then( ( saved ) => {
+			if ( ! ( saved.options || [] ).some( ( o ) => o.enabled ) ) {
+				toast( 'error', __( 'Show at least one answer in the Survey tab first, then turn the survey on.', 'sourcesay' ) );
+				return done( false );
+			}
+			return api( '/admin/settings', { method: 'POST', data: { settings: Object.assign( clone( saved ), { enabled: true } ) } } ).then( ( r ) => {
+				const clean = ! isDirty();
+				const keys = S.draft ? S.draft.options.map( ( o ) => o._k ) : [];
+				S.saved = r.settings;
+				if ( S.draft && clean ) {
+					S.draft = withKeys( r.settings );
+					S.draft.options.forEach( ( o, i ) => {
+						if ( keys[ i ] ) {
+							o._k = keys[ i ];
+						}
+					} );
+				} else if ( S.draft ) {
+					S.draft.enabled = true;
+				}
+				announce( __( 'Your survey is on.', 'sourcesay' ) );
+				loadStatus();
+				return done( true );
+			} );
+		} ).catch( ( err ) => {
+			toast( 'error', sprintf( /* translators: %s: error message */ __( 'The survey was not turned on. %s', 'sourcesay' ), errText( err ) ) );
+			return done( false );
+		} );
+	}
+
+	function offCard( st ) {
+		const others = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) );
+		const tests = +st.test_orders || 0;
+		const on = el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary ss-btn--sm', on: { click: ( e ) => {
+			turnOn( e.currentTarget ).then( ( ok ) => {
+				if ( ok ) {
+					toast( 'success', __( 'Your survey is on. Customers will see it after their next order.', 'sourcesay' ) );
+				}
+			} );
+		} } }, ico( 'check' ), __( 'Turn on survey', 'sourcesay' ) );
+		return el( 'section', { class: 'ss-status-card is-off', 'aria-label': __( 'Survey status', 'sourcesay' ) },
+			el( 'span', { class: 'ss-status-card__icon' }, ico( 'eye' ) ),
+			el( 'div', { class: 'ss-status-card__main' },
+				el( 'p', { class: 'ss-status-card__title', text: __( 'Your survey is off', 'sourcesay' ) } ),
+				el( 'p', { class: 'ss-muted', text: __( 'Customers do not see the question yet. Only you can see it, on test orders, until you turn it on.', 'sourcesay' ) } ),
+				others.length ? el( 'ul', { class: 'ss-problems', 'aria-label': __( 'Also worth checking', 'sourcesay' ) }, others.map( ( p ) => el( 'li', null, el( 'span', { text: p.message } ), ' ', problemLink( p ) ) ) ) : null,
+				tests ? el( 'p', { class: 'ss-status-card__tests' }, sprintf( /* translators: %d: number of test orders */ _n( '%d test order exists. Test orders never appear in your reports.', '%d test orders exist. Test orders never appear in your reports.', tests, 'sourcesay' ), tests ) + ' ',
+					el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) )
+				) : null
+			),
+			el( 'div', { class: 'ss-status-card__actions' },
+				on,
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary ss-btn--sm', on: { click: runSetupAgain } }, ico( 'refresh' ), __( 'Run setup again', 'sourcesay' ) ),
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', on: { click: openTest } }, ico( 'bag' ), __( 'Place a test order', 'sourcesay' ) )
+			)
+		);
+	}
+
 	function statusCard() {
 		if ( S.statusState === 'error' ) {
 			return el( 'div', { class: 'ss-status-card is-problem', role: 'status' },
@@ -1390,8 +1602,11 @@
 			return el( 'div', { class: 'ss-status-card', 'aria-hidden': 'true' }, el( 'span', { class: 'ss-skel', style: 'width:44px;height:44px;border-radius:12px' } ), el( 'div', { class: 'ss-status-card__main' }, el( 'span', { class: 'ss-skel ss-skel--title' } ), el( 'span', { class: 'ss-skel', style: 'width:60%' } ) ) );
 		}
 		const st = S.status;
-		const problems = st.problems || [];
-		const live = !! st.survey_live;
+		if ( surveyOff() ) {
+			return offCard( st );
+		}
+		const problems = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) );
+		const live = !! st.survey_live || ! problems.length;
 		const checkout = { block: __( 'Block checkout', 'sourcesay' ), classic: __( 'Classic checkout', 'sourcesay' ) }[ st.checkout_type ] || __( 'Not detected', 'sourcesay' );
 		const facts = el( 'dl', { class: 'ss-facts' },
 			el( 'div', null, el( 'dt', { text: __( 'Last answer', 'sourcesay' ) } ), el( 'dd', { text: relTime( st.last_response_at ) } ) ),
@@ -1468,22 +1683,53 @@
 		}
 	}
 
-	function finishSetup( tested ) {
+	/** Marks setup as done (never changes whether the survey is on). */
+	function markSetupDone() {
+		if ( S.status ) {
+			S.status.setup_done = true;
+		}
+		return api( '/admin/setup-done', { method: 'POST' } ).catch( () => {} );
+	}
+
+	/**
+	 * Close the wizard and land on Reports.
+	 *
+	 * @param {string|null} msg Toast after a first run; null for none.
+	 */
+	function finishSetup( msg ) {
 		const st = S.setup;
 		clearInterval( st.timer );
 		const wasFirstRun = ! st.fromStatus;
 		S.setupOpen = false;
-		S.setup = { step: 1, preset: st.preset, test: 'idle', url: '', base: null, timer: 0, started: 0 };
-		if ( S.status ) {
-			S.status.setup_done = true;
-		}
-		if ( wasFirstRun ) {
-			api( '/admin/setup-done', { method: 'POST' } ).catch( () => {} );
-			toast( 'success', tested ? __( 'Setup finished. Your survey is live.', 'sourcesay' ) : __( 'Setup closed. You can place a test order any time from Reports.', 'sourcesay' ) );
+		S.setup = { step: 1, preset: st.preset, test: 'idle', url: '', base: null, timer: 0, started: 0, live: false };
+		if ( wasFirstRun && ! st.live ) {
+			markSetupDone();
+			if ( msg ) {
+				toast( 'success', msg );
+			}
 		}
 		render( true );
 		loadStatus();
 		loadReport();
+	}
+
+	/** Setup step 3: switch the survey on, mark setup done, then celebrate in place. */
+	function setupTurnOn( btn ) {
+		turnOn( btn ).then( ( ok ) => {
+			if ( ! ok ) {
+				return;
+			}
+			clearInterval( S.setup.timer );
+			S.setup.live = true;
+			if ( ! S.setup.fromStatus ) {
+				markSetupDone();
+			}
+			render();
+			const h = main.querySelector( '.ss-celebrate__title' );
+			if ( h ) {
+				h.focus();
+			}
+		} );
 	}
 
 	function arrived( s, base ) {
@@ -1571,8 +1817,8 @@
 		const firstRun = ! st.fromStatus;
 		wrap.appendChild( pageHead(
 			firstRun ? __( 'Set up SourceSay', 'sourcesay' ) : __( 'Test your survey', 'sourcesay' ),
-			firstRun ? __( 'Three quick steps and your survey is live. You can change everything later.', 'sourcesay' ) : __( 'Place a test order and answer the question, just like a customer would.', 'sourcesay' ),
-			el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary', text: firstRun ? __( 'Skip setup', 'sourcesay' ) : __( 'Close', 'sourcesay' ), on: { click: () => finishSetup( false ) } } )
+			firstRun ? __( 'Three quick steps. Your survey stays off until you turn it on at the end, and you can change everything later.', 'sourcesay' ) : __( 'Place a test order and answer the question, just like a customer would.', 'sourcesay' ),
+			st.live ? null : el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary', text: firstRun ? __( 'Skip setup', 'sourcesay' ) : __( 'Close', 'sourcesay' ), on: { click: () => finishSetup( firstRun ? __( 'Setup skipped. Your survey is still off. Turn it on from Reports when you are ready.', 'sourcesay' ) : null ) } } )
 		) );
 		if ( firstRun ) {
 			wrap.appendChild( el( 'ol', { class: 'ss-stepper', 'aria-label': __( 'Setup steps', 'sourcesay' ) }, steps.map( ( name, i ) => el( 'li', {
@@ -1640,10 +1886,6 @@
 				el( 'section', { class: 'ss-card ss-setup' }, el( 'div', { class: 'ss-card__body' },
 					title( __( 'Check your question', 'sourcesay' ), __( 'This is what customers see after they pay. Reword it if you like.', 'sourcesay' ) ),
 					el( 'div', { class: 'ss-stack', style: 'margin-top:20px' },
-						toggle( { label: __( 'Ask customers after checkout', 'sourcesay' ), help: __( 'Customers can always skip the question.', 'sourcesay' ), checked: d.enabled, onChange: ( v ) => {
-							d.enabled = v;
-							changed();
-						} } ),
 						textField( { label: __( 'Question text', 'sourcesay' ), value: d.question, max: 160, errKey: 'question', onInput: ( v ) => {
 							d.question = v;
 							changed();
@@ -1652,7 +1894,7 @@
 							d.thank_you = v;
 							changed();
 						} } ),
-						el( 'p', { class: 'ss-field__help', text: __( 'Answers, icons, follow-up questions, colours and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
+						el( 'p', { class: 'ss-field__help', text: __( 'Customers can always skip the question. Answers, icons, follow-up questions, colours and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
 					),
 					foot( back( 1 ), next )
 				) ),
@@ -1663,8 +1905,23 @@
 			return;
 		}
 
-		// Step 3: test order.
-		const problems = ( S.status && S.status.problems ) || [];
+		// Step 3: test order, then switch on.
+		const off = surveyOff();
+		if ( st.live ) {
+			wrap.appendChild( el( 'section', { class: 'ss-card ss-setup' }, el( 'div', { class: 'ss-card__body' },
+				el( 'div', { class: 'ss-celebrate', role: 'status' },
+					el( 'span', { class: 'ss-celebrate__icon', 'aria-hidden': 'true' }, ico( 'check' ) ),
+					el( 'p', { class: 'ss-celebrate__title', tabindex: '-1', text: __( 'Your survey is on', 'sourcesay' ) } ),
+					el( 'p', { class: 'ss-muted', text: __( 'Customers will see it after their next order. Their answers show up in Reports.', 'sourcesay' ) } )
+				),
+				foot(
+					S.status && S.status.test_orders ? el( 'button', { type: 'button', class: 'ss-btn ss-btn--neutral', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) ) : null,
+					el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: () => finishSetup( null ) } }, ico( 'chart' ), __( 'Go to Reports', 'sourcesay' ) )
+				)
+			) ) );
+			return;
+		}
+		const problems = ( ( S.status && S.status.problems ) || [] ).filter( ( p ) => ! isOffProblem( p ) );
 		let panel;
 		if ( st.test === 'waiting' ) {
 			panel = el( 'div', { class: 'ss-wait', role: 'status' },
@@ -1679,7 +1936,7 @@
 			panel = el( 'div', { class: 'ss-celebrate', role: 'status' },
 				el( 'span', { class: 'ss-celebrate__icon', 'aria-hidden': 'true' }, ico( 'check' ) ),
 				el( 'p', { class: 'ss-celebrate__title', text: __( 'It works. Your answer arrived.', 'sourcesay' ) } ),
-				el( 'p', { class: 'ss-muted', text: __( 'From now on, customers see this question right after checkout. Their answers show up in Reports.', 'sourcesay' ) } )
+				el( 'p', { class: 'ss-muted', text: off ? __( 'Customers do not see the question yet. Turn on your survey below when you are happy with it.', 'sourcesay' ) : __( 'Customers see this question right after checkout. Their answers show up in Reports.', 'sourcesay' ) } )
 			);
 		} else if ( st.test === 'timeout' ) {
 			panel = el( 'div', { class: 'ss-notice ss-notice--warning', role: 'status' }, ico( 'warning' ), el( 'div', { class: 'ss-notice__body' },
@@ -1689,21 +1946,30 @@
 		} else {
 			panel = el( 'div', { class: 'ss-test-start' },
 				st.test === 'error' ? el( 'p', { class: 'ss-field__error', role: 'alert' }, ico( 'warning' ), el( 'span', { text: sprintf( /* translators: %s: error message */ __( 'The test order could not be created. %s', 'sourcesay' ), errText( st.err ) ) } ) ) : null,
-				el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary' + ( st.test === 'creating' ? ' is-busy' : '' ), on: { click: placeTest } }, ico( 'bag' ), __( 'Place a test order', 'sourcesay' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
+				el( 'button', { type: 'button', class: 'ss-btn ' + ( off ? 'ss-btn--secondary' : 'ss-btn--primary' ) + ( st.test === 'creating' ? ' is-busy' : '' ), on: { click: placeTest } }, ico( 'bag' ), __( 'Place a test order', 'sourcesay' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
 				el( 'p', { class: 'ss-field__help', text: __( 'Opens the order confirmation page in a new tab. The test order is marked as a test, sends no emails, and is never counted in your reports.', 'sourcesay' ) } )
 			);
 		}
-		const doneLabel = firstRun ? __( 'Finish setup', 'sourcesay' ) : __( 'Done', 'sourcesay' );
+		const hasTests = st.test === 'arrived' || ( S.status && S.status.test_orders );
+		let actions;
+		if ( off ) {
+			actions = [
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary', text: firstRun ? __( 'Finish later, keep it off', 'sourcesay' ) : __( 'Close, keep it off', 'sourcesay' ), on: { click: () => finishSetup( firstRun ? __( 'Setup saved. Your survey stays off until you turn it on from Reports.', 'sourcesay' ) : null ) } } ),
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: ( e ) => setupTurnOn( e.currentTarget ) } }, ico( 'check' ), __( 'Turn on my survey', 'sourcesay' ) ),
+			];
+		} else {
+			actions = [ el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: () => finishSetup( firstRun ? __( 'Setup finished. Your survey is on.', 'sourcesay' ) : null ) } }, ico( 'check' ), firstRun ? __( 'Finish setup', 'sourcesay' ) : __( 'Done', 'sourcesay' ) ) ];
+		}
 		wrap.appendChild( el( 'section', { class: 'ss-card ss-setup' }, el( 'div', { class: 'ss-card__body' },
 			title( __( 'See it live', 'sourcesay' ), __( 'Place a test order and answer the question, just like a customer would.', 'sourcesay' ) ),
+			off ? el( 'div', { class: 'ss-notice', style: 'margin-top:16px' }, ico( 'info' ), el( 'div', { class: 'ss-notice__body' }, el( 'span', { text: __( 'Your survey is still off. Test orders show it anyway: only you can see it on test orders until you turn it on.', 'sourcesay' ) } ) ) ) : null,
 			problems.length ? el( 'div', { class: 'ss-notice ss-notice--warning', style: 'margin-top:16px' }, ico( 'warning' ), el( 'div', { class: 'ss-notice__body' }, el( 'span', { text: problems.map( ( p ) => p.message ).join( ' ' ) } ), el( 'a', { class: 'ss-btn ss-btn--secondary ss-btn--sm', href: '#survey', text: __( 'Open Survey', 'sourcesay' ) } ) ) ) : null,
 			el( 'div', { style: 'margin-top:20px' }, panel ),
+			off ? el( 'p', { class: 'ss-field__help ss-setup__golive', text: __( 'Testing is optional. When you turn the survey on, customers see the question after their next order.', 'sourcesay' ) } ) : null,
 			foot(
 				firstRun ? back( 2 ) : null,
-				st.test === 'arrived' || ( S.status && S.status.test_orders ) ? el( 'button', { type: 'button', class: 'ss-btn ss-btn--neutral', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) ) : null,
-				st.test === 'arrived'
-					? el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: () => finishSetup( true ) } }, ico( 'check' ), doneLabel )
-					: el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary', text: firstRun ? __( 'Finish without testing', 'sourcesay' ) : __( 'Close', 'sourcesay' ), on: { click: () => finishSetup( false ) } } )
+				hasTests ? el( 'button', { type: 'button', class: 'ss-btn ss-btn--neutral', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) ) : null,
+				actions
 			)
 		) ) );
 	}
@@ -1986,6 +2252,7 @@
 			S.saved = r.settings;
 			S.presets = r.presets || {};
 			S.icons = ( r.icons && r.icons.length ) ? r.icons : ICON_KEYS;
+			S.iconGroups = ( r.icon_groups && typeof r.icon_groups === 'object' && Object.keys( r.icon_groups ).length ) ? r.icon_groups : ICON_GROUPS;
 			S.draft = withKeys( r.settings );
 			S.accentCustom = !! r.settings.accent;
 			S.settingsState = 'ready';
@@ -2149,7 +2416,7 @@
 
 		const qCard = card( { title: __( 'Question', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
-				toggle( { label: __( 'Ask customers after checkout', 'sourcesay' ), help: __( 'Shows the question on the order confirmation page. Customers can skip it.', 'sourcesay' ), checked: d.enabled, onChange: ( v ) => {
+				toggle( { label: __( 'Show the survey to customers after checkout', 'sourcesay' ), help: __( 'On: customers see it on the order confirmation page and can skip it. Off: only test orders show it.', 'sourcesay' ), checked: d.enabled, onChange: ( v ) => {
 					d.enabled = v;
 					changed();
 				} } ),
@@ -2522,7 +2789,8 @@
 		}
 		closePopover();
 		const titleId = uid( 'pt' );
-		const keys = [ '' ].concat( S.icons );
+		const current = o.icon || '';
+		const name = ( k ) => ( k ? ( ICON_LABELS[ k ] || k.replace( /-/g, ' ' ) ) : __( 'No icon', 'sourcesay' ) );
 		const choose = ( key ) => {
 			o.icon = key;
 			trigger.textContent = '';
@@ -2532,58 +2800,206 @@
 			closePopover( true );
 			changed();
 		};
-		const btns = keys.map( ( k ) => el( 'button', {
-			type: 'button',
-			class: 'ss-icon-grid__btn',
-			'aria-pressed': String( ( o.icon || '' ) === k ),
-			'aria-label': k ? ( ICON_LABELS[ k ] || k ) : __( 'No icon', 'sourcesay' ),
-			title: k ? ( ICON_LABELS[ k ] || k ) : __( 'No icon', 'sourcesay' ),
-			tabindex: ( o.icon || '' ) === k ? '0' : '-1',
-			on: { click: () => choose( k ) },
-		}, k ? ico( k ) : el( 'span', { class: 'ss-icon-grid__none', 'aria-hidden': 'true', text: __( 'None', 'sourcesay' ) } ) ) );
-		if ( ! btns.some( ( b ) => b.tabIndex === 0 ) ) {
-			btns[ 0 ].tabIndex = 0;
+		// Groups in server order; any key the server lists outside a group lands in "More".
+		const groups = Object.keys( S.iconGroups || {} ).map( ( g ) => ( { label: S.iconGroups[ g ].label || g, icons: ( S.iconGroups[ g ].icons || [] ).filter( ( k ) => S.icons.indexOf( k ) > -1 ) } ) );
+		const grouped = new Set( groups.reduce( ( all, g ) => all.concat( g.icons ), [] ) );
+		const loose = S.icons.filter( ( k ) => ! grouped.has( k ) );
+		if ( loose.length ) {
+			groups.push( { label: __( 'More', 'sourcesay' ), icons: loose } );
 		}
-		const grid = el( 'div', { class: 'ss-icon-grid' }, btns );
-		const node = el( 'div', { class: 'ss-pop', role: 'dialog', 'aria-labelledby': titleId },
-			el( 'p', { class: 'ss-pop__title', id: titleId, text: __( 'Choose an icon', 'sourcesay' ) } ),
-			grid
+		const words = ( s ) => String( s || '' ).toLowerCase().normalize( 'NFKD' ).replace( /[̀-ͯ]/g, '' ).split( /[^a-z0-9]+/ ).filter( Boolean );
+		const iconBtn = ( k, groupLabel ) => {
+			const b = el( 'button', {
+				type: 'button',
+				class: 'ss-icon-grid__btn',
+				'aria-pressed': String( current === k ),
+				'aria-label': name( k ),
+				title: name( k ),
+				tabindex: '-1',
+				'data-k': k,
+				on: { click: () => choose( k ) },
+			}, ico( k ), current === k ? el( 'span', { class: 'ss-icon-grid__tick', 'aria-hidden': 'true' }, ico( 'check' ) ) : null );
+			b._words = words( k + ' ' + name( k ) + ' ' + ( ICON_WORDS[ k ] || '' ) + ' ' + groupLabel );
+			return b;
+		};
+		const none = el( 'button', {
+			type: 'button',
+			class: 'ss-icon-none',
+			'aria-pressed': String( ! current ),
+			tabindex: '-1',
+			on: { click: () => choose( '' ) },
+		}, el( 'span', { class: 'ss-icon-none__swatch', 'aria-hidden': 'true' } ), el( 'span', { text: __( 'No icon', 'sourcesay' ) } ), ! current ? ico( 'check' ) : null );
+		const sections = groups.filter( ( g ) => g.icons.length ).map( ( g ) => {
+			const hid = uid( 'pg' );
+			const btns = g.icons.map( ( k ) => iconBtn( k, g.label ) );
+			return { node: el( 'div', { class: 'ss-icon-group', role: 'group', 'aria-labelledby': hid },
+				el( 'p', { class: 'ss-icon-group__label', id: hid, text: g.label } ),
+				el( 'div', { class: 'ss-icon-grid' }, btns )
+			), btns };
+		} );
+		const all = sections.reduce( ( list, s ) => list.concat( s.btns ), [] );
+		const search = el( 'input', {
+			type: 'search',
+			class: 'ss-input ss-pop__search',
+			placeholder: __( 'Search icons, e.g. podcast', 'sourcesay' ),
+			'aria-label': __( 'Search icons', 'sourcesay' ),
+			autocomplete: 'off',
+			spellcheck: 'false',
+		} );
+		const count = el( 'p', { class: 'ss-sr', role: 'status', 'aria-live': 'polite' } );
+		const emptyMsg = el( 'p', { class: 'ss-icon-empty', hidden: true } );
+		const hint = el( 'p', { class: 'ss-pop__hint', 'aria-hidden': 'true', text: current ? name( current ) : __( 'Point at an icon to see its name.', 'sourcesay' ) } );
+		const scroller = el( 'div', { class: 'ss-pop__scroll' }, sections.map( ( s ) => s.node ), emptyMsg );
+		const node = el( 'div', { class: 'ss-pop ss-pop--icons', role: 'dialog', 'aria-labelledby': titleId },
+			el( 'div', { class: 'ss-pop__head' },
+				el( 'p', { class: 'ss-pop__title', id: titleId, text: __( 'Choose an icon', 'sourcesay' ) } ),
+				el( 'button', { type: 'button', class: 'ss-icon-btn ss-icon-btn--sm', 'aria-label': __( 'Close', 'sourcesay' ), on: { click: () => closePopover( true ) } }, ico( 'close' ) )
+			),
+			el( 'div', { class: 'ss-pop__searchwrap' }, search ),
+			none,
+			scroller,
+			hint,
+			count
 		);
+		const visible = () => [ none ].concat( all.filter( ( b ) => ! b.hidden ) );
+		const rove = ( b ) => {
+			[ none ].concat( all ).forEach( ( x ) => {
+				x.tabIndex = x === b ? 0 : -1;
+			} );
+		};
+		const filter = () => {
+			const q = words( search.value );
+			let shown = 0;
+			sections.forEach( ( s ) => {
+				let n = 0;
+				s.btns.forEach( ( b ) => {
+					const hit = ! q.length || q.every( ( t ) => b._words.some( ( w ) => w.indexOf( t ) === 0 ) );
+					b.hidden = ! hit;
+					n += hit ? 1 : 0;
+				} );
+				s.node.hidden = ! n;
+				shown += n;
+			} );
+			none.hidden = q.length > 0;
+			emptyMsg.hidden = shown > 0;
+			emptyMsg.textContent = shown ? '' : sprintf( /* translators: %s: search text */ __( 'No icons match “%s”. Try a channel type instead, like video, email or shop.', 'sourcesay' ), search.value.trim() );
+			count.textContent = q.length ? sprintf( /* translators: %d: number of icons */ _n( '%d icon found', '%d icons found', shown, 'sourcesay' ), shown ) : '';
+			const first = visible().find( ( b ) => ! b.hidden );
+			const sel = visible().find( ( b ) => b.getAttribute( 'aria-pressed' ) === 'true' && ! b.hidden );
+			rove( sel || first || none );
+			scroller.scrollTop = 0;
+		};
+		search.addEventListener( 'input', filter );
+		const showName = ( e ) => {
+			const b = e.target.closest && e.target.closest( '.ss-icon-grid__btn' );
+			if ( b ) {
+				hint.textContent = name( b.getAttribute( 'data-k' ) );
+			}
+		};
+		scroller.addEventListener( 'pointerover', showName );
+		scroller.addEventListener( 'focusin', showName );
+		// Arrow keys move by what is on screen, so rows work across group headings and while filtered.
+		const step = ( from, key ) => {
+			const list = visible().filter( ( b ) => ! b.hidden );
+			const i = list.indexOf( from );
+			if ( key === 'ArrowRight' ) {
+				return list[ Math.min( list.length - 1, i + 1 ) ];
+			}
+			if ( key === 'ArrowLeft' ) {
+				return i <= 0 ? null : list[ i - 1 ];
+			}
+			if ( key === 'Home' ) {
+				return list[ 0 ];
+			}
+			if ( key === 'End' ) {
+				return list[ list.length - 1 ];
+			}
+			// Row position in scroll-content coordinates, so icons scrolled out of view still sort correctly.
+			const top = ( b ) => ( b === none ? -1e6 : b.getBoundingClientRect().top + scroller.scrollTop );
+			const r = from.getBoundingClientRect();
+			const fromTop = top( from );
+			const cx = r.left + r.width / 2;
+			const down = key === 'ArrowDown';
+			const cands = list.filter( ( b ) => {
+				const t = top( b );
+				return down ? t > fromTop + 4 : t < fromTop - 4;
+			} );
+			if ( ! cands.length ) {
+				return down ? from : null;
+			}
+			const rowTop = cands.reduce( ( m, b ) => {
+				const t = top( b );
+				return down ? Math.min( m, t ) : Math.max( m, t );
+			}, down ? Infinity : -Infinity );
+			const row = cands.filter( ( b ) => Math.abs( top( b ) - rowTop ) < 4 );
+			return row.reduce( ( best, b ) => {
+				const br = b.getBoundingClientRect();
+				const d = Math.abs( br.left + br.width / 2 - cx );
+				return ! best || d < best.d ? { b, d } : best;
+			}, null ).b;
+		};
 		node.addEventListener( 'keydown', ( e ) => {
 			if ( e.key === 'Escape' ) {
 				e.preventDefault();
 				e.stopPropagation();
+				if ( document.activeElement === search && search.value ) {
+					search.value = '';
+					filter();
+					return;
+				}
 				closePopover( true );
 				return;
 			}
-			const i = btns.indexOf( document.activeElement );
-			if ( i < 0 ) {
-				return;
-			}
-			const map = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 6, ArrowUp: -6, Home: -i, End: btns.length - 1 - i };
-			if ( map[ e.key ] === undefined ) {
-				if ( e.key === 'Tab' ) {
-					closePopover( true );
+			const a = document.activeElement;
+			if ( a === search ) {
+				if ( e.key === 'ArrowDown' || ( e.key === 'Enter' && search.value.trim() ) ) {
 					e.preventDefault();
+					const target = e.key === 'Enter' ? all.find( ( b ) => ! b.hidden ) : visible().find( ( b ) => b.tabIndex === 0 && ! b.hidden );
+					if ( target && e.key === 'Enter' ) {
+						choose( target.getAttribute( 'data-k' ) );
+					} else if ( target ) {
+						target.focus();
+						target.scrollIntoView( { block: 'nearest' } );
+					}
 				}
 				return;
 			}
+			const isItem = a === none || all.indexOf( a ) > -1;
+			if ( e.key === 'Tab' ) {
+				// Tab order: close, search, the active icon. Tabbing past the icons returns to the trigger.
+				if ( isItem && ! e.shiftKey ) {
+					e.preventDefault();
+					closePopover( true );
+				}
+				return;
+			}
+			if ( ! isItem || [ 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End' ].indexOf( e.key ) < 0 ) {
+				return;
+			}
 			e.preventDefault();
-			const j = Math.min( btns.length - 1, Math.max( 0, i + map[ e.key ] ) );
-			btns[ i ].tabIndex = -1;
-			btns[ j ].tabIndex = 0;
-			btns[ j ].focus();
+			const next = step( a, e.key );
+			if ( ! next ) {
+				search.focus();
+				return;
+			}
+			rove( next );
+			next.focus();
+			if ( next === none ) {
+				scroller.scrollTop = 0;
+			} else {
+				next.scrollIntoView( { block: 'nearest' } );
+			}
 		} );
 		const place = () => {
 			const r = trigger.getBoundingClientRect();
-			const w = node.offsetWidth || 292;
-			const h = node.offsetHeight || 260;
+			const w = node.offsetWidth || 340;
+			const h = node.offsetHeight || 420;
 			let top = r.bottom + 6;
-			if ( top + h > window.innerHeight - 8 && r.top - h - 6 > 8 ) {
-				top = r.top - h - 6;
+			if ( top + h > window.innerHeight - 8 ) {
+				top = r.top - h - 6 > 8 ? r.top - h - 6 : Math.max( 8, window.innerHeight - h - 8 );
 			}
 			node.style.top = top + 'px';
-			node.style.left = Math.max( 8, Math.min( r.left, window.innerWidth - w - 8 ) ) + 'px';
+			node.style.left = Math.max( 8, Math.min( r.left, document.documentElement.clientWidth - w - 8 ) ) + 'px';
 		};
 		node.style.position = 'fixed';
 		mount.appendChild( node );
@@ -2598,7 +3014,20 @@
 		window.addEventListener( 'resize', place );
 		pop = { node, trigger, onDoc, onPos: place };
 		trigger.setAttribute( 'aria-expanded', 'true' );
-		btns.find( ( b ) => b.tabIndex === 0 ).focus();
+		node.addEventListener( 'focusout', ( e ) => {
+			if ( e.relatedTarget && ! node.contains( e.relatedTarget ) && e.relatedTarget !== trigger ) {
+				closePopover();
+			}
+		} );
+		const sel = all.find( ( b ) => b.getAttribute( 'aria-pressed' ) === 'true' ) || none;
+		rove( sel );
+		// Mouse and keyboard users start typing straight away; on touch, skip the keyboard popping up.
+		if ( window.matchMedia && window.matchMedia( '(pointer: fine)' ).matches ) {
+			search.focus();
+		} else {
+			sel.focus( { preventScroll: true } );
+		}
+		sel.scrollIntoView( { block: 'nearest' } );
 	}
 
 	/* Live preview: same markup and survey.css as the front-end widget. */
@@ -2613,9 +3042,7 @@
 		frame.appendChild( el( 'p', { class: 'ss-frame__note', text: __( 'Thank you. Your order has been received.', 'sourcesay' ) } ) );
 		const details = el( 'div', { class: 'ss-frame__order', 'aria-hidden': 'true' }, el( 'span' ), el( 'span' ), el( 'span' ) );
 		let survey;
-		if ( ! d.enabled ) {
-			survey = el( 'p', { class: 'ss-frame__off', text: __( 'The survey is turned off. Customers do not see it.', 'sourcesay' ) } );
-		} else if ( ! opts.length ) {
+		if ( ! opts.length ) {
 			survey = el( 'p', { class: 'ss-frame__off', text: __( 'Show at least one answer to display the survey.', 'sourcesay' ) } );
 		} else {
 			survey = previewSurvey( d, opts );
@@ -2628,7 +3055,10 @@
 		R.preview.textContent = '';
 		R.preview.appendChild( frame );
 		const notes = [];
-		if ( d.enabled && opts.length && d.shuffle ) {
+		if ( ! d.enabled ) {
+			R.preview.insertBefore( el( 'p', { class: 'ss-frame__badge' }, ico( 'eye' ), __( 'Preview only. The survey is off, so customers do not see it yet.', 'sourcesay' ) ), frame );
+		}
+		if ( opts.length && d.shuffle ) {
 			notes.push( __( 'Answers are shuffled for each order. “Other” always stays last.', 'sourcesay' ) );
 		}
 		R.preview.appendChild( el( 'div', { class: 'ss-frame__reset' },

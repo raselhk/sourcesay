@@ -16,7 +16,8 @@ defined( 'ABSPATH' ) || exit;
  */
 function sourcesay_should_display( $order, $context ) {
 	$settings = sourcesay_get_settings();
-	$show     = ! empty( $settings['enabled'] );
+	// Test orders always show the survey, so owners can try it before turning it on for customers.
+	$show = ! empty( $settings['enabled'] ) || '1' === (string) $order->get_meta( '_sourcesay_test' );
 	if ( $show ) {
 		$has = false;
 		foreach ( $settings['options'] as $opt ) {
@@ -31,6 +32,10 @@ function sourcesay_should_display( $order, $context ) {
 		$show = false;
 	}
 	if ( $show && sourcesay_get_response( $order->get_id() ) ) {
+		$show = false; // Answered or skipped.
+	}
+	// New customers only: hide for anyone with an earlier paid order. Test orders always show.
+	if ( $show && 'new' === $settings['audience'] && '1' !== (string) $order->get_meta( '_sourcesay_test' ) && sourcesay_is_returning( $order ) ) {
 		$show = false;
 	}
 	/**
@@ -44,22 +49,54 @@ function sourcesay_should_display( $order, $context ) {
 }
 
 /**
- * Print the survey for an order.
+ * Has the survey already been rendered for this order during this request?
+ *
+ * @param int  $order_id Order id.
+ * @param bool $mark     Record it as rendered.
+ * @return bool True when it was already rendered before this call.
+ */
+function sourcesay_rendered_once( $order_id, $mark = false ) {
+	static $done = array();
+	$was         = isset( $done[ $order_id ] );
+	if ( $mark ) {
+		$done[ $order_id ] = true;
+	}
+	return $was;
+}
+
+/**
+ * Survey markup for an order, or an empty string. Renders at most once per order per request.
+ *
+ * @param WC_Order $order   Order.
+ * @param string   $context Context.
+ * @return string
+ */
+function sourcesay_survey_html( $order, $context ) {
+	if ( ! function_exists( 'sourcesay_render_survey' ) || sourcesay_rendered_once( $order->get_id() ) ) {
+		return '';
+	}
+	// After a no-JS submit the response exists, so show the thank-you note instead of the form.
+	$thanks = isset( $_GET['sourcesay'] ) && 'thanks' === sanitize_key( wp_unslash( $_GET['sourcesay'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( ! $thanks && ! sourcesay_should_display( $order, $context ) ) {
+		return '';
+	}
+	sourcesay_rendered_once( $order->get_id(), true );
+	return (string) sourcesay_render_survey( $order, sourcesay_translate_settings( sourcesay_get_settings() ), $context );
+}
+
+/**
+ * Print the survey for an order (automatic placement).
  *
  * @param WC_Order $order   Order.
  * @param string   $context Context.
  * @return void
  */
 function sourcesay_print_survey( $order, $context ) {
-	if ( ! function_exists( 'sourcesay_render_survey' ) ) {
-		return;
+	$settings = sourcesay_get_settings();
+	if ( 'manual' === $settings['placement'] ) {
+		return; // Only the block or shortcode shows it.
 	}
-	// After a no-JS submit the response exists, so show the thank-you note instead of the form.
-	$thanks = isset( $_GET['sourcesay'] ) && 'thanks' === sanitize_key( wp_unslash( $_GET['sourcesay'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	if ( ! $thanks && ! sourcesay_should_display( $order, $context ) ) {
-		return;
-	}
-	echo sourcesay_render_survey( $order, sourcesay_get_settings(), $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside the renderer.
+	echo sourcesay_survey_html( $order, $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside the renderer.
 }
 
 /**
@@ -108,20 +145,21 @@ add_action( 'init', 'sourcesay_register_display_hooks' );
 /**
  * Enqueue survey assets where the survey can appear.
  *
+ * @param bool $force Enqueue even when this is not an order page (block or shortcode).
  * @return void
  */
-function sourcesay_enqueue_survey_assets() {
-	if ( ! function_exists( 'is_order_received_page' ) || ! ( is_order_received_page() || is_wc_endpoint_url( 'view-order' ) ) ) {
+function sourcesay_enqueue_survey_assets( $force = false ) {
+	if ( ! $force && ( ! function_exists( 'is_order_received_page' ) || ! ( is_order_received_page() || is_wc_endpoint_url( 'view-order' ) ) ) ) {
 		return;
 	}
 	if ( file_exists( SOURCESAY_PATH . 'assets/css/survey.css' ) ) {
-		wp_enqueue_style( 'sourcesay-survey', SOURCESAY_URL . 'assets/css/survey.css', array(), SOURCESAY_VERSION );
+		wp_enqueue_style( 'sourcesay-survey', SOURCESAY_URL . 'assets/css/survey.css', array(), sourcesay_asset_version( 'assets/css/survey.css' ) );
 	}
 	if ( file_exists( SOURCESAY_PATH . 'assets/js/survey.js' ) ) {
-		wp_enqueue_script( 'sourcesay-survey', SOURCESAY_URL . 'assets/js/survey.js', array(), SOURCESAY_VERSION, true );
+		wp_enqueue_script( 'sourcesay-survey', SOURCESAY_URL . 'assets/js/survey.js', array(), sourcesay_asset_version( 'assets/js/survey.js' ), true );
 	}
 }
-add_action( 'wp_enqueue_scripts', 'sourcesay_enqueue_survey_assets' );
+add_action( 'wp_enqueue_scripts', 'sourcesay_enqueue_survey_assets', 10, 0 );
 
 /**
  * Process a submitted survey (shared by the no-JS handler and tests).

@@ -45,7 +45,7 @@ function sourcesay_export_rows( $from, $to ) {
 				get_date_from_gmt( $r['order_created'], 'Y-m-d' ),
 				$r['order_id'],
 				$order ? $order->get_order_number() : $r['order_id'],
-				$r['answer_label'],
+				'__skip' === $r['answer_id'] ? __( 'Skipped', 'sourcesay' ) : $r['answer_label'],
 				$r['followup_text'],
 				$r['other_text'],
 				$r['order_total'],

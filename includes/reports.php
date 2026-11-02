@@ -100,6 +100,65 @@ function sourcesay_currency_info() {
 }
 
 /**
+ * Paid, non-test response rows of a range (skips included).
+ *
+ * @param array $range Resolved range.
+ * @return array[]
+ */
+function sourcesay_report_rows( $range ) {
+	global $wpdb;
+	list( $in, $paid ) = sourcesay_paid_in();
+	$sql               = "SELECT answer_id, answer_label, followup_text, other_text, order_total_base, order_currency, order_created, is_returning FROM %i WHERE is_test = 0 AND order_created BETWEEN %s AND %s AND order_status IN ({$in}) ORDER BY order_created DESC"; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	return (array) $wpdb->get_results( $wpdb->prepare( $sql, array_merge( array( sourcesay_table(), $range['start'], $range['end'] ), $paid ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+}
+
+/**
+ * Totals block for a set of rows. Skips are counted in `skipped`, never in `responses`.
+ *
+ * @param array[] $rows        Response rows.
+ * @param int     $paid_orders Paid orders in the range.
+ * @return array
+ */
+function sourcesay_totals( $rows, $paid_orders ) {
+	$responses = 0;
+	$skipped   = 0;
+	$revenue   = 0.0;
+	foreach ( $rows as $r ) {
+		if ( '__skip' === $r['answer_id'] ) {
+			++$skipped;
+			continue;
+		}
+		++$responses;
+		$revenue += (float) $r['order_total_base'];
+	}
+	return array(
+		'paid_orders'   => $paid_orders,
+		'responses'     => $responses,
+		'response_rate' => $paid_orders ? round( min( 1, $responses / $paid_orders ), 4 ) : 0.0,
+		'revenue'       => round( $revenue, 2 ),
+		'aov'           => round( $responses ? $revenue / $responses : 0, 2 ),
+		'skipped'       => $skipped,
+		'skip_rate'     => $paid_orders ? round( min( 1, $skipped / $paid_orders ), 4 ) : 0.0,
+	);
+}
+
+/**
+ * The same-length range right before this one.
+ *
+ * @param array $range Resolved range.
+ * @return array Resolved range.
+ */
+function sourcesay_previous_range( $range ) {
+	$tz   = wp_timezone();
+	$from = new DateTimeImmutable( $range['from'], $tz );
+	$to   = new DateTimeImmutable( $range['to'], $tz );
+	$days = (int) $from->diff( $to )->days + 1;
+	$pto  = $from->modify( '-1 day' );
+	$pfr  = $pto->modify( '-' . ( $days - 1 ) . ' days' );
+	return sourcesay_resolve_range( $pfr->format( 'Y-m-d' ), $pto->format( 'Y-m-d' ) );
+}
+
+/**
  * Build the attribution report.
  *
  * @param string $from YYYY-MM-DD.
@@ -107,8 +166,6 @@ function sourcesay_currency_info() {
  * @return array
  */
 function sourcesay_get_report( $from = '', $to = '' ) {
-	global $wpdb;
-
 	$range = sourcesay_resolve_range( $from, $to );
 	$ckey  = 'sourcesay_rep_' . (int) get_option( 'sourcesay_cache_v', 0 ) . '_' . md5( $range['from'] . '|' . $range['to'] . '|' . get_option( 'timezone_string' ) . get_option( 'gmt_offset' ) );
 	$hit   = get_transient( $ckey );
@@ -116,10 +173,18 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 		return $hit;
 	}
 
-	list( $in, $paid ) = sourcesay_paid_in();
-	$table             = sourcesay_table();
-	$sql               = "SELECT answer_id, answer_label, followup_text, other_text, order_total, order_created, is_returning FROM %i WHERE is_test = 0 AND order_created BETWEEN %s AND %s AND order_status IN ({$in}) ORDER BY order_created DESC"; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$rows              = $wpdb->get_results( $wpdb->prepare( $sql, array_merge( array( $table, $range['start'], $range['end'] ), $paid ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	$all   = sourcesay_report_rows( $range );
+	$base  = (string) get_option( 'woocommerce_currency', '' );
+	$mixed = false;
+	$rows  = array();
+	foreach ( $all as $r ) {
+		if ( '' !== $r['order_currency'] && $r['order_currency'] !== $base ) {
+			$mixed = true;
+		}
+		if ( '__skip' !== $r['answer_id'] ) {
+			$rows[] = $r; // Answers only: skips are counted in the totals, never in channels.
+		}
+	}
 
 	// Trend skeleton: one row per day.
 	$trend = array();
@@ -158,7 +223,7 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 
 	foreach ( $rows as $r ) {
 		$id  = $r['answer_id'];
-		$rev = (float) $r['order_total'];
+		$rev = (float) $r['order_total_base'];
 		if ( ! isset( $chan[ $id ] ) ) {
 			if ( isset( $meta[ $id ] ) ) {
 				$label = $meta[ $id ][0];
@@ -171,12 +236,14 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 				$icon  = '';
 			}
 			$chan[ $id ] = array(
-				'answer_id' => $id,
-				'label'     => $label,
-				'icon'      => $icon,
-				'responses' => 0,
-				'orders'    => 0,
-				'revenue'   => 0.0,
+				'answer_id'      => $id,
+				'label'          => $label,
+				'icon'           => $icon,
+				'responses'      => 0,
+				'orders'         => 0,
+				'revenue'        => 0.0,
+				'prev_responses' => 0,
+				'prev_revenue'   => 0.0,
 			);
 		}
 		++$chan[ $id ]['responses'];
@@ -215,12 +282,31 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 		}
 	}
 
+	// Previous period of the same length.
+	$prange   = sourcesay_previous_range( $range );
+	$prows    = sourcesay_report_rows( $prange );
+	$previous = array(
+		'range'  => array(
+			'from' => $prange['from'],
+			'to'   => $prange['to'],
+		),
+		'totals' => sourcesay_totals( $prows, sourcesay_count_paid_orders( $prange ) ),
+	);
+	unset( $previous['totals']['skip_rate'] );
+	foreach ( $prows as $r ) {
+		if ( '__skip' !== $r['answer_id'] && isset( $chan[ $r['answer_id'] ] ) ) {
+			++$chan[ $r['answer_id'] ]['prev_responses'];
+			$chan[ $r['answer_id'] ]['prev_revenue'] += (float) $r['order_total_base'];
+		}
+	}
+
 	$n = count( $rows );
 	foreach ( $chan as &$c ) {
 		$c['aov']             = round( $c['responses'] ? $c['revenue'] / $c['responses'] : 0, 2 );
 		$c['share_responses'] = $n ? round( $c['responses'] / $n, 4 ) : 0.0;
 		$c['share_revenue']   = $tot_rev > 0 ? round( $c['revenue'] / $tot_rev, 4 ) : 0.0;
 		$c['revenue']         = round( $c['revenue'], 2 );
+		$c['prev_revenue']    = round( $c['prev_revenue'], 2 );
 	}
 	unset( $c );
 	usort(
@@ -250,20 +336,15 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 	}
 	unset( $v );
 
-	$paid_orders = sourcesay_count_paid_orders( $range );
-	$report      = array(
+	$report = array(
 		'range'            => array(
 			'from' => $range['from'],
 			'to'   => $range['to'],
 		),
 		'currency'         => sourcesay_currency_info(),
-		'totals'           => array(
-			'paid_orders'   => $paid_orders,
-			'responses'     => $n,
-			'response_rate' => $paid_orders ? round( min( 1, $n / $paid_orders ), 4 ) : 0.0,
-			'revenue'       => round( $tot_rev, 2 ),
-			'aov'           => round( $n ? $tot_rev / $n : 0, 2 ),
-		),
+		'mixed_currency'   => $mixed,
+		'totals'           => sourcesay_totals( $all, sourcesay_count_paid_orders( $range ) ),
+		'previous'         => $previous,
 		'channels'         => $chan,
 		'trend'            => array_values( $trend ),
 		'followups'        => (object) $follow,

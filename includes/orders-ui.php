@@ -67,7 +67,8 @@ function sourcesay_filter_dropdown() {
 	foreach ( $settings['options'] as $opt ) {
 		printf( '<option value="%s"%s>%s</option>', esc_attr( $opt['id'] ), selected( $current, $opt['id'], false ), esc_html( $opt['label'] ) );
 	}
-	printf( '<option value="other"%s>%s</option></select>', selected( $current, 'other', false ), esc_html( $settings['other']['label'] ) );
+	printf( '<option value="other"%s>%s</option>', selected( $current, 'other', false ), esc_html( $settings['other']['label'] ) );
+	printf( '<option value="__skip"%s>%s</option></select>', selected( $current, '__skip', false ), esc_html__( 'Skipped', 'sourcesay' ) );
 }
 add_action( 'woocommerce_order_list_table_restrict_manage_orders', 'sourcesay_filter_dropdown' );
 add_action(

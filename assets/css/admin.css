@@ -1580,13 +1580,137 @@ body:has(.ss-app) #wpfooter {
 	font-weight: var(--ss-fw-bold);
 }
 
+.ss-pop--icons {
+	display: flex;
+	flex-direction: column;
+	width: 348px;
+	max-height: min(480px, calc(100vh - 16px));
+	padding: var(--ss-space-3) var(--ss-space-3) var(--ss-space-2);
+}
+
+.ss-pop__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ss-space-2);
+	margin: -4px -4px var(--ss-space-2) 0;
+}
+
+.ss-pop__head .ss-pop__title {
+	margin: 0;
+}
+
+.ss-app .ss-icon-btn--sm {
+	width: 32px;
+	height: 32px;
+}
+
+.ss-app .ss-icon-btn--sm .ss-ico {
+	width: 16px;
+	height: 16px;
+}
+
+.ss-pop__searchwrap {
+	position: relative;
+	margin-bottom: var(--ss-space-2);
+}
+
+.ss-app .ss-pop__search {
+	min-height: 40px;
+}
+
+.ss-app .ss-icon-none {
+	display: flex;
+	align-items: center;
+	gap: var(--ss-space-2);
+	width: 100%;
+	min-height: 40px;
+	margin: 0 0 var(--ss-space-2);
+	padding: 0 var(--ss-space-3) 0 6px;
+	border: var(--ss-border-w) solid var(--ss-border);
+	border-radius: var(--ss-radius-control);
+	background: var(--ss-card);
+	color: var(--ss-text);
+	font: inherit;
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-semibold);
+	text-align: left;
+	cursor: pointer;
+}
+
+.ss-app .ss-icon-none:hover {
+	background: var(--ss-bg);
+}
+
+.ss-icon-none__swatch {
+	position: relative;
+	width: 28px;
+	height: 28px;
+	flex: none;
+	border: 1.5px dashed var(--ss-border-strong);
+	border-radius: 8px;
+}
+
+.ss-icon-none__swatch::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 4px;
+	right: 4px;
+	height: 1.5px;
+	background: var(--ss-border-strong);
+	transform: rotate(-45deg);
+}
+
+.ss-app .ss-icon-none .ss-ico {
+	width: 16px;
+	height: 16px;
+	margin-left: auto;
+	color: var(--ss-primary);
+}
+
+.ss-app .ss-icon-none[aria-pressed="true"] {
+	border-color: var(--ss-primary);
+	background: var(--ss-tile-blue);
+	color: var(--ss-primary);
+}
+
+.ss-pop__scroll {
+	flex: 1 1 auto;
+	min-height: 120px;
+	margin: 0 calc(var(--ss-space-3) * -1);
+	padding: 0 var(--ss-space-3) var(--ss-space-1);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+
+.ss-icon-group + .ss-icon-group {
+	margin-top: var(--ss-space-3);
+}
+
+.ss-icon-group__label {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0 0 4px;
+	padding: 6px 2px 4px;
+	background: var(--ss-card);
+	color: var(--ss-text-2);
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-bold);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
 .ss-icon-grid {
 	display: grid;
-	grid-template-columns: repeat(6, minmax(0, 1fr));
+	grid-template-columns: repeat(7, minmax(0, 1fr));
 	gap: 4px;
 }
 
 .ss-app .ss-icon-grid__btn {
+	position: relative;
 	display: grid;
 	place-items: center;
 	width: 100%;
@@ -1599,10 +1723,14 @@ body:has(.ss-app) #wpfooter {
 	background: none;
 	color: var(--ss-text);
 	cursor: pointer;
+	scroll-margin-top: 32px;
+	transition: background var(--ss-dur-fast) var(--ss-ease), color var(--ss-dur-fast) var(--ss-ease), transform var(--ss-dur-fast) var(--ss-ease);
 }
 
 .ss-app .ss-icon-grid__btn:hover {
 	background: var(--ss-bg);
+	color: var(--ss-primary);
+	transform: translateY(-1px);
 }
 
 .ss-app .ss-icon-grid__btn[aria-pressed="true"] {
@@ -1611,10 +1739,56 @@ body:has(.ss-app) #wpfooter {
 	color: var(--ss-primary);
 }
 
-.ss-icon-grid__none {
-	font-size: 10px;
-	font-weight: var(--ss-fw-semibold);
+.ss-icon-grid__tick {
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	display: grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--ss-card);
+	border-radius: 50%;
+	background: var(--ss-primary);
+	color: #fff;
+}
+
+.ss-app .ss-icon-grid__tick .ss-ico {
+	width: 9px;
+	height: 9px;
+}
+
+.ss-icon-empty {
+	padding: var(--ss-space-5) var(--ss-space-2);
 	color: var(--ss-text-2);
+	font-size: var(--ss-fs-label);
+	text-align: center;
+}
+
+.ss-pop__hint {
+	margin: var(--ss-space-2) calc(var(--ss-space-3) * -1) 0;
+	padding: var(--ss-space-2) var(--ss-space-3) 0;
+	border-top: var(--ss-border-w) solid var(--ss-border);
+	overflow: hidden;
+	color: var(--ss-text-2);
+	font-size: var(--ss-fs-help);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+
+	.ss-icon-grid {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+
+	.ss-app .ss-icon-grid__btn {
+		min-height: 44px;
+	}
+
+	.ss-app .ss-icon-grid__btn:hover {
+		transform: none;
+	}
 }
 
 @keyframes ss-pop {
@@ -2291,6 +2465,43 @@ body:has(.ss-app) #wpfooter {
 .is-problem .ss-status-card__icon {
 	background: var(--ss-tile-orange);
 	color: var(--ss-warning-text);
+}
+
+/* Off is a normal, expected state (new installs start off): calm amber, never error red. */
+.ss-status-card.is-off {
+	border-color: #f6dfb8;
+	background: linear-gradient(100deg, #fffaf0, var(--ss-card) 65%);
+}
+
+.is-off .ss-status-card__icon {
+	background: #fdf0d5;
+	color: #92560a;
+}
+
+.is-off .ss-status-card__actions {
+	align-self: center;
+}
+
+.ss-setup__golive {
+	margin-top: var(--ss-space-4) !important;
+}
+
+.ss-frame__badge {
+	display: flex;
+	align-items: center;
+	gap: var(--ss-space-2);
+	margin-bottom: var(--ss-space-3) !important;
+	padding: var(--ss-space-2) var(--ss-space-3);
+	border-radius: 10px;
+	background: #fffaf0;
+	color: #7a4a0c;
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-semibold);
+}
+
+.ss-app .ss-frame__badge .ss-ico {
+	width: 16px;
+	height: 16px;
 }
 
 .ss-status-card__main {

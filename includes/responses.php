@@ -76,9 +76,15 @@ function sourcesay_is_returning( $order ) {
 function sourcesay_save_response( $order, $answer_id, $followup = '', $other = '', $context = 'thankyou' ) {
 	global $wpdb;
 
-	$settings  = sourcesay_get_settings();
-	$answer_id = sanitize_key( $answer_id );
-	if ( 'other' === $answer_id ) {
+	$settings = sourcesay_get_settings();
+	// "__skip" is stored as a row so the survey is not shown again, but it is never an answer.
+	$answer_id = '__skip' === $answer_id ? '__skip' : sanitize_key( $answer_id );
+	if ( '__skip' === $answer_id ) {
+		$valid    = ! empty( $settings['allow_skip'] );
+		$label    = $settings['skip_label'];
+		$followup = '';
+		$other    = '';
+	} elseif ( 'other' === $answer_id ) {
 		$valid = ! empty( $settings['other']['enabled'] );
 		$label = $settings['other']['label'];
 	} else {
@@ -95,23 +101,24 @@ function sourcesay_save_response( $order, $answer_id, $followup = '', $other = '
 
 	$created = $order->get_date_created();
 	$data    = array(
-		'order_id'       => $order->get_id(),
-		'customer_id'    => $order->get_customer_id(),
-		'question'       => sourcesay_cut( $settings['question'], 191 ),
-		'answer_id'      => $answer_id,
-		'answer_label'   => sourcesay_cut( $label, 191 ),
-		'followup_text'  => sourcesay_cut( sanitize_textarea_field( $followup ), 500 ),
-		'other_text'     => 'other' === $answer_id ? sourcesay_cut( sanitize_textarea_field( $other ), 500 ) : '',
-		'order_total'    => sourcesay_net_total( $order ),
-		'order_currency' => sourcesay_cut( $order->get_currency(), 3 ),
-		'order_status'   => $order->get_status(),
-		'order_created'  => gmdate( 'Y-m-d H:i:s', $created ? $created->getTimestamp() : time() ),
-		'is_returning'   => sourcesay_is_returning( $order ),
-		'is_test'        => $order->get_meta( '_sourcesay_test' ) ? 1 : 0,
-		'wc_source_type' => sourcesay_cut( (string) $order->get_meta( '_wc_order_attribution_source_type' ), 32 ),
-		'wc_source'      => sourcesay_cut( (string) $order->get_meta( '_wc_order_attribution_utm_source' ), 191 ),
-		'context'        => in_array( $context, array( 'thankyou', 'account', 'nojs' ), true ) ? $context : 'thankyou',
-		'created_at'     => gmdate( 'Y-m-d H:i:s' ),
+		'order_id'         => $order->get_id(),
+		'customer_id'      => $order->get_customer_id(),
+		'question'         => sourcesay_cut( $settings['question'], 191 ),
+		'answer_id'        => $answer_id,
+		'answer_label'     => sourcesay_cut( $label, 191 ),
+		'followup_text'    => sourcesay_cut( sanitize_textarea_field( $followup ), 500 ),
+		'other_text'       => 'other' === $answer_id ? sourcesay_cut( sanitize_textarea_field( $other ), 500 ) : '',
+		'order_total'      => sourcesay_net_total( $order ),
+		'order_total_base' => sourcesay_order_total_base( $order ),
+		'order_currency'   => sourcesay_cut( $order->get_currency(), 3 ),
+		'order_status'     => $order->get_status(),
+		'order_created'    => gmdate( 'Y-m-d H:i:s', $created ? $created->getTimestamp() : time() ),
+		'is_returning'     => sourcesay_is_returning( $order ),
+		'is_test'          => $order->get_meta( '_sourcesay_test' ) ? 1 : 0,
+		'wc_source_type'   => sourcesay_cut( (string) $order->get_meta( '_wc_order_attribution_source_type' ), 32 ),
+		'wc_source'        => sourcesay_cut( (string) $order->get_meta( '_wc_order_attribution_utm_source' ), 191 ),
+		'context'          => in_array( $context, array( 'thankyou', 'account', 'nojs' ), true ) ? $context : 'thankyou',
+		'created_at'       => gmdate( 'Y-m-d H:i:s' ),
 	);
 	/**
 	 * Filter the row about to be inserted.
@@ -133,6 +140,18 @@ function sourcesay_save_response( $order, $answer_id, $followup = '', $other = '
 	$order->update_meta_data( '_sourcesay_answer_id', $answer_id );
 	$order->save_meta_data();
 	sourcesay_flush_report_cache();
+
+	if ( '__skip' !== $answer_id ) {
+		$detail = '' !== (string) $data['followup_text'] ? $data['followup_text'] : $data['other_text'];
+		if ( '' !== (string) $detail ) {
+			/* translators: 1: answer label, 2: follow-up or "other" text. */
+			$note = sprintf( __( 'Customer said: %1$s (%2$s)', 'sourcesay' ), $data['answer_label'], $detail );
+		} else {
+			/* translators: %s: answer label. */
+			$note = sprintf( __( 'Customer said: %s', 'sourcesay' ), $data['answer_label'] );
+		}
+		$order->add_order_note( $note, false ); // Private note.
+	}
 
 	/**
 	 * Fires after a response is stored.
@@ -163,10 +182,11 @@ function sourcesay_sync_order( $order_id ) {
 		return;
 	}
 	$fields = array(
-		'order_total'  => sourcesay_net_total( $order ),
-		'order_status' => $order->get_status(),
+		'order_total'      => sourcesay_net_total( $order ),
+		'order_total_base' => sourcesay_order_total_base( $order ),
+		'order_status'     => $order->get_status(),
 	);
-	if ( abs( (float) $row['order_total'] - $fields['order_total'] ) < 0.00005 && $row['order_status'] === $fields['order_status'] ) {
+	if ( abs( (float) $row['order_total'] - $fields['order_total'] ) < 0.00005 && abs( (float) $row['order_total_base'] - $fields['order_total_base'] ) < 0.00005 && $row['order_status'] === $fields['order_status'] ) {
 		return;
 	}
 	$wpdb->update( sourcesay_table(), $fields, array( 'order_id' => (int) $order_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
