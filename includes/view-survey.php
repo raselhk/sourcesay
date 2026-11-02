@@ -142,7 +142,7 @@ function sourcesay_render_survey( WC_Order $order, array $settings, string $cont
 					<input class="ss-radio" type="radio" name="answer_id" value="<?php echo esc_attr( $opt['id'] ); ?>"
 					<?php
 					if ( $is_other ) {
-						echo ' data-other="1" data-placeholder="' . esc_attr( $opt['placeholder'] ) . '"';
+						echo ' data-other="1"';
 					} elseif ( $fu ) {
 						echo ' data-followup="' . esc_attr( $fu['question'] ) . '" data-placeholder="' . esc_attr( $fu['placeholder'] ?? '' ) . '"';
 					}
@@ -168,7 +168,7 @@ function sourcesay_render_survey( WC_Order $order, array $settings, string $cont
 				<input class="ss-input" type="text" id="<?php echo esc_attr( $uid . '-other' ); ?>" name="other_text" maxlength="500" autocomplete="off">
 			</div>
 			<?php endif; ?>
-			<button type="submit" class="ss-send"><?php esc_html_e( 'Send', 'sourcesay' ); ?></button>
+			<button type="submit" class="ss-send"><span><?php esc_html_e( 'Send', 'sourcesay' ); ?></span></button>
 		</div>
 		<p class="ss-status" role="status" aria-live="polite"></p>
 	</form>

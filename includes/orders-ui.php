@@ -62,7 +62,8 @@ function sourcesay_current_filter() {
 function sourcesay_filter_dropdown() {
 	$settings = sourcesay_get_settings();
 	$current  = sourcesay_current_filter();
-	echo '<select name="sourcesay_answer"><option value="">' . esc_html__( 'All sources', 'sourcesay' ) . '</option>';
+	echo '<label for="sourcesay-answer-filter" class="screen-reader-text">' . esc_html__( 'Filter by how customers heard about you', 'sourcesay' ) . '</label>';
+	echo '<select name="sourcesay_answer" id="sourcesay-answer-filter"><option value="">' . esc_html__( 'Heard about us: all answers', 'sourcesay' ) . '</option>';
 	foreach ( $settings['options'] as $opt ) {
 		printf( '<option value="%s"%s>%s</option>', esc_attr( $opt['id'] ), selected( $current, $opt['id'], false ), esc_html( $opt['label'] ) );
 	}

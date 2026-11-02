@@ -32,7 +32,7 @@ function sourcesay_export_rows( $from, $to ) {
 	global $wpdb;
 	$range = sourcesay_resolve_range( $from, $to );
 	$table = sourcesay_table();
-	$items = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE is_test = 0 AND order_created BETWEEN %s AND %s ORDER BY order_created ASC", $table, $range['start'], $range['end'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+	$items = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE is_test = 0 AND order_created BETWEEN %s AND %s ORDER BY order_created ASC', $table, $range['start'], $range['end'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 
 	$rows = array(
 		array( 'date', 'order_id', 'order_number', 'answer', 'follow_up', 'other', 'order_total', 'currency', 'status', 'returning', 'woocommerce_source_type', 'woocommerce_source' ),

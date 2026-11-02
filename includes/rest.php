@@ -248,6 +248,7 @@ function sourcesay_get_status() {
 	$table = sourcesay_table();
 	$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 	$last  = $wpdb->get_var( "SELECT MAX(created_at) FROM {$table} WHERE is_test = 0" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+	$tresp = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 	$rep   = sourcesay_get_report();
 	$tests = wc_get_orders(
 		array(
@@ -272,6 +273,7 @@ function sourcesay_get_status() {
 		'response_rate_30d' => $rep['totals']['response_rate'],
 		'setup_done'        => (bool) get_option( 'sourcesay_setup_done', 0 ),
 		'test_orders'       => (int) $tests->total,
+		'test_responses'    => $tresp,
 	);
 }
 

@@ -25,7 +25,7 @@ function sourcesay_flush_report_cache() {
 function sourcesay_get_response( $order_id ) {
 	global $wpdb;
 	$table = sourcesay_table();
-	$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE order_id = %d", $table, (int) $order_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$row   = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE order_id = %d', $table, (int) $order_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	return $row ? $row : null;
 }
 

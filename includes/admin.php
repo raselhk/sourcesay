@@ -100,6 +100,8 @@ function sourcesay_admin_assets( $hook ) {
 				admin_url( 'admin-post.php' )
 			),
 			'ordersUrl'      => sourcesay_orders_url(),
+			'shopUrl'        => wc_get_page_permalink( 'shop' ),
+			'homeUrl'        => home_url( '/' ),
 			'icons'          => SOURCESAY_URL . 'assets/icons.svg',
 			'version'        => SOURCESAY_VERSION,
 			'wcSourceLabels' => sourcesay_wc_source_labels(),

@@ -50,10 +50,7 @@
 				}
 			}
 			if ( other ) {
-				other.hidden = ! isOther;
-				if ( isOther ) {
-					other.querySelector( 'input' ).placeholder = radio.getAttribute( 'data-placeholder' ) || '';
-				}
+				other.hidden = ! isOther; // Its label already shows the prompt text.
 			}
 			root.classList.add( 'is-open' );
 			if ( focus ) {
