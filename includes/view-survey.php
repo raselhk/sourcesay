@@ -110,8 +110,11 @@ function sourcesay_render_survey( WC_Order $order, array $settings, string $cont
 		'limit'   => __( 'Too many tries in a short time. Please try again in a few minutes.', 'sourcesay' ),
 		'retry'   => __( 'Try again', 'sourcesay' ),
 		'detail'  => __( 'Anything to add? (optional)', 'sourcesay' ),
+		'skipped' => __( 'No problem, thanks!', 'sourcesay' ),
 		'sprite'  => defined( 'SOURCESAY_URL' ) ? SOURCESAY_URL . 'assets/icons.svg' : '',
 	);
+	$allow_skip = ! empty( $settings['allow_skip'] );
+	$skip_label = isset( $settings['skip_label'] ) && '' !== trim( (string) $settings['skip_label'] ) ? (string) $settings['skip_label'] : __( 'Prefer not to say', 'sourcesay' );
 
 	ob_start();
 	?>
@@ -170,6 +173,12 @@ function sourcesay_render_survey( WC_Order $order, array $settings, string $cont
 			<?php endif; ?>
 			<button type="submit" class="ss-send"><span><?php esc_html_e( 'Send', 'sourcesay' ); ?></span></button>
 		</div>
+		<?php if ( $allow_skip ) : ?>
+		<div class="ss-skip">
+			<?php // Without JS this button posts answer_id=__skip; it comes after the radios, so its value wins. ?>
+			<button type="submit" class="ss-skip__btn" name="answer_id" value="__skip"><?php echo esc_html( $skip_label ); ?></button>
+		</div>
+		<?php endif; ?>
 		<p class="ss-status" role="status" aria-live="polite"></p>
 	</form>
 </section>

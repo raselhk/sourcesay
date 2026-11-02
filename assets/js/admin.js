@@ -186,6 +186,7 @@
 		statusErr: null,
 		setupOpen: false,
 		setup: { step: 1, preset: 'general', test: 'idle', url: '', base: null, timer: 0, started: 0, live: false },
+		jump: '',
 	};
 	const R = {}; // Live DOM references for the current tab.
 
@@ -436,6 +437,10 @@
 				show_in_account: true,
 				retention_days: 0,
 				delete_on_uninstall: false,
+				placement: 'auto',
+				audience: 'all',
+				allow_skip: true,
+				skip_label: 'Prefer not to say',
 			},
 			presets: { general, fashion, b2b, local },
 		};
@@ -683,6 +688,9 @@
 		}
 		if ( ! String( d.thank_you || '' ).trim() ) {
 			e.thank_you = __( 'Write a short thank-you message.', 'sourcesay' );
+		}
+		if ( d.allow_skip && ! String( d.skip_label || '' ).trim() ) {
+			e.skip_label = __( 'Write the text for the skip button, or turn the button off.', 'sourcesay' );
 		}
 		return e;
 	}
@@ -1056,6 +1064,40 @@
 			}
 			window.scrollTo( 0, 0 );
 		}
+		jumpToTarget();
+	}
+
+	/** "Show me how" links: scroll to a card on the next render that has it (settings may still be loading). */
+	function jumpToTarget() {
+		if ( ! S.jump ) {
+			return;
+		}
+		const target = main.querySelector( '[data-jump="' + S.jump + '"]' );
+		if ( ! target ) {
+			return;
+		}
+		S.jump = '';
+		const help = target.querySelector( 'details' );
+		if ( help ) {
+			help.open = true;
+		}
+		target.scrollIntoView( { block: 'start', behavior: window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches ? 'auto' : 'smooth' } );
+		const h = target.querySelector( '.ss-card__title' );
+		if ( h ) {
+			h.setAttribute( 'tabindex', '-1' );
+			h.focus( { preventScroll: true } );
+		}
+		target.classList.remove( 'is-flash' );
+		void target.offsetWidth;
+		target.classList.add( 'is-flash' );
+	}
+
+	function showMeHow( e ) {
+		S.jump = 'placement';
+		if ( S.tab === 'survey' ) {
+			e.preventDefault();
+			jumpToTarget();
+		}
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -1145,7 +1187,11 @@
 			} ),
 			cfg.exportUrl ? el( 'a', { class: 'ss-btn ss-btn--secondary', href: exportHref() }, ico( 'download' ), __( 'Export CSV', 'sourcesay' ) ) : null
 		);
-		const rangeText = S.range.from ? sprintf( /* translators: 1: start date, 2: end date */ __( 'Showing %1$s to %2$s.', 'sourcesay' ), fmtDay( S.range.from ), fmtDay( S.range.to, true ) ) : '';
+		let rangeText = S.range.from ? sprintf( /* translators: 1: start date, 2: end date */ __( 'Showing %1$s to %2$s.', 'sourcesay' ), fmtDay( S.range.from ), fmtDay( S.range.to, true ) ) : '';
+		const prevRange = S.report && S.report.previous && S.report.previous.range;
+		if ( rangeText && prevRange && prevRange.from ) {
+			rangeText += ' ' + sprintf( /* translators: 1: start date, 2: end date of the previous period */ __( 'Changes compare with %1$s to %2$s.', 'sourcesay' ), fmtDay( prevRange.from ), fmtDay( prevRange.to, true ) );
+		}
 		wrap.appendChild( pageHead( __( 'Reports', 'sourcesay' ), [ __( 'See which channels customers name after checkout and how much revenue each one brings.', 'sourcesay' ), rangeText ? ' ' + rangeText : '' ], range ) );
 
 		if ( S.customOpen ) {
@@ -1175,7 +1221,11 @@
 			body.appendChild( reportEmpty( t ) );
 			return;
 		}
-		body.appendChild( el( 'div', { class: 'ss-grid' }, kpis( t ) ) );
+		body.appendChild( el( 'div', { class: 'ss-grid' }, kpis( t, rep ) ) );
+		if ( rep.mixed_currency ) {
+			const code = ( rep.currency && rep.currency.code ) || '';
+			body.appendChild( el( 'p', { class: 'ss-note' }, ico( 'info' ), el( 'span', { text: sprintf( /* translators: %s: store base currency code, e.g. USD */ __( 'Revenue is converted to %s, your store’s main currency, so orders paid in other currencies add up correctly.', 'sourcesay' ), code ) } ) ) );
+		}
 		body.appendChild( channelsCard( rep ) );
 		body.appendChild( el( 'div', { class: 'ss-grid' },
 			el( 'div', { class: 'ss-span-8' }, trendCard( rep ) ),
@@ -1296,21 +1346,110 @@
 		);
 	}
 
-	function kpis( t ) {
-		const tile = ( icon, tone, label, value, meta, help ) => el( 'div', { class: 'ss-card ss-span-3' },
+	/* ---------- Change vs the previous period ---------- */
+	function prevInfo() {
+		const p = S.report && S.report.previous;
+		return p && p.range && p.range.from ? p : null;
+	}
+
+	function prevRangeText() {
+		const p = prevInfo();
+		return p ? sprintf( /* translators: 1: start date, 2: end date */ __( '%1$s to %2$s', 'sourcesay' ), fmtDay( p.range.from ), fmtDay( p.range.to, true ) ) : '';
+	}
+
+	function fmtPts( v ) {
+		const a = Math.abs( v );
+		return new Intl.NumberFormat( LOCALE, { maximumFractionDigits: a < 10 ? 1 : 0 } ).format( a );
+	}
+
+	/**
+	 * Small pill: "+12%" / "−8%" (or "+3 pts" for rates), green when better, red when worse,
+	 * neutral "New" when the previous period had nothing. Hover/focus shows the previous range and value.
+	 *
+	 * @param {number}  cur     Value in this range.
+	 * @param {number}  prev    Value in the previous range.
+	 * @param {Object}  o       { pts: bool (rate, show percentage points), prevText: formatted previous value, focusable: bool, base: previous denominator for rates }
+	 * @return {Element|null}
+	 */
+	function delta( cur, prev, o ) {
+		o = o || {};
+		if ( ! prevInfo() ) {
+			return null;
+		}
+		cur = +cur || 0;
+		prev = +prev || 0;
+		const empty = o.pts ? ! ( +o.base ) : prev === 0;
+		let cls = 'flat';
+		let text;
+		let arrow = null;
+		let say;
+		if ( empty ) {
+			if ( ! cur ) {
+				return null;
+			}
+			text = __( 'New', 'sourcesay' );
+			say = __( 'Nothing in the previous period to compare with.', 'sourcesay' );
+		} else {
+			let diff;
+			if ( o.pts ) {
+				diff = ( cur - prev ) * 100;
+				diff = Math.round( diff * 10 ) / 10;
+				text = diff === 0 ? __( 'No change', 'sourcesay' ) : sprintf( /* translators: %s: percentage points */ diff > 0 ? __( '+%s pts', 'sourcesay' ) : __( '−%s pts', 'sourcesay' ), fmtPts( diff ) );
+			} else {
+				diff = Math.round( ( ( cur - prev ) / prev ) * 100 );
+				text = diff === 0 ? __( 'No change', 'sourcesay' ) : ( diff > 0 ? '+' : '−' ) + new Intl.NumberFormat( LOCALE ).format( Math.abs( diff ) ) + '%';
+			}
+			if ( diff > 0 ) {
+				cls = 'up';
+				arrow = 'arrow-up';
+			} else if ( diff < 0 ) {
+				cls = 'down';
+				arrow = 'arrow-down';
+			}
+			say = diff > 0 ? __( 'Up from the previous period.', 'sourcesay' ) : ( diff < 0 ? __( 'Down from the previous period.', 'sourcesay' ) : __( 'Same as the previous period.', 'sourcesay' ) );
+		}
+		const tipText = sprintf( /* translators: 1: date range, 2: value in that range */ __( 'Previous period, %1$s: %2$s', 'sourcesay' ), prevRangeText(), o.prevText !== undefined ? o.prevText : fmtNum( prev ) );
+		return el( 'span', { class: 'ss-delta ss-delta--' + cls, tabindex: o.focusable ? '0' : null },
+			arrow ? ico( arrow ) : null,
+			el( 'span', { class: 'ss-delta__val', text } ),
+			el( 'span', { class: 'ss-delta__tip', role: 'tooltip' }, el( 'span', { class: 'ss-sr', text: ' ' + say + ' ' } ), tipText )
+		);
+	}
+
+	function kpis( t, rep ) {
+		const p = ( prevInfo() && rep.previous.totals ) || {};
+		const tile = ( icon, tone, label, value, change, meta, help ) => el( 'div', { class: 'ss-card ss-span-3' },
 			el( 'div', { class: 'ss-kpi' },
 				el( 'span', { class: 'ss-kpi__icon' + ( tone ? ' ss-kpi__icon--' + tone : '' ) }, ico( icon ) ),
 				el( 'span', { class: 'ss-kpi__label' }, labelWithTip( label, help ) ),
-				el( 'span', { class: 'ss-kpi__value', text: value } ),
-				el( 'span', { class: 'ss-kpi__meta', text: meta } )
+				el( 'span', { class: 'ss-kpi__valrow' }, el( 'span', { class: 'ss-kpi__value', text: value } ), change ),
+				el( 'span', { class: 'ss-kpi__meta' }, meta )
 			)
 		);
 		const paid = +t.paid_orders || 0;
+		const skipped = +t.skipped || 0;
+		const skipOff = !! S.saved && ! S.saved.allow_skip && ! skipped;
+		const skipMeta = skipOff ? __( 'Paid orders that answered', 'sourcesay' ) : el( 'span', { class: 'ss-kpi__skip' },
+			sprintf( /* translators: 1: number of skips, 2: share of paid orders */ _n( '%1$s skipped (%2$s)', '%1$s skipped (%2$s)', skipped, 'sourcesay' ), fmtNum( skipped ), fmtPct( t.skip_rate, 1 ) ),
+			tip( __( 'Skipped', 'sourcesay' ), __( 'Customers who pressed the skip button (for example “Prefer not to say”). Skips do not count as answers, so they never change your channel numbers or the response rate.', 'sourcesay' ) )
+		);
 		return [
-			tile( 'responses', '', __( 'Answers', 'sourcesay' ), fmtNum( t.responses ), sprintf( /* translators: %s: number of paid orders */ _n( 'From %s paid order', 'From %s paid orders', paid, 'sourcesay' ), fmtNum( paid ) ), __( 'How many customers picked an answer. Test orders are not counted.', 'sourcesay' ) ),
-			tile( 'percent', 'purple', __( 'Response rate', 'sourcesay' ), fmtPct( t.response_rate, 1 ), __( 'Paid orders that answered', 'sourcesay' ), __( 'Out of every paid order in this date range, the share whose customer answered the question. 30% means 3 in 10 customers answered.', 'sourcesay' ) ),
-			tile( 'revenue', 'green', __( 'Revenue from answered orders', 'sourcesay' ), fmtMoney( t.revenue ), __( 'Paid orders, minus refunds', 'sourcesay' ), __( 'The total spent on orders whose customer answered, after refunds. Orders without an answer are not included.', 'sourcesay' ) ),
-			tile( 'receipt', 'orange', __( 'Average order value', 'sourcesay' ), fmtMoney( t.aov ), __( 'Across answered orders', 'sourcesay' ), __( 'Revenue from answered orders divided by the number of those orders: what one of these customers spends per order.', 'sourcesay' ) ),
+			tile( 'responses', '', __( 'Answers', 'sourcesay' ), fmtNum( t.responses ),
+				delta( t.responses, p.responses, { focusable: true } ),
+				sprintf( /* translators: %s: number of paid orders */ _n( 'From %s paid order', 'From %s paid orders', paid, 'sourcesay' ), fmtNum( paid ) ),
+				__( 'How many customers picked an answer. Skips and test orders are not counted.', 'sourcesay' ) ),
+			tile( 'percent', 'purple', __( 'Response rate', 'sourcesay' ), fmtPct( t.response_rate, 1 ),
+				delta( t.response_rate, p.response_rate, { pts: true, base: p.paid_orders, focusable: true, prevText: fmtPct( p.response_rate, 1 ) } ),
+				skipMeta,
+				__( 'Out of every paid order in this date range, the share whose customer answered the question. 30% means 3 in 10 customers answered. The change is shown in percentage points (pts).', 'sourcesay' ) ),
+			tile( 'revenue', 'green', __( 'Revenue from answered orders', 'sourcesay' ), fmtMoney( t.revenue ),
+				delta( t.revenue, p.revenue, { focusable: true, prevText: fmtMoney( p.revenue ) } ),
+				__( 'Paid orders, minus refunds', 'sourcesay' ),
+				__( 'The total spent on orders whose customer answered, after refunds. Orders without an answer are not included.', 'sourcesay' ) ),
+			tile( 'receipt', 'orange', __( 'Average order value', 'sourcesay' ), fmtMoney( t.aov ),
+				delta( t.aov, p.aov, { focusable: true, prevText: fmtMoney( p.aov ) } ),
+				__( 'Across answered orders', 'sourcesay' ),
+				__( 'Revenue from answered orders divided by the number of those orders: what one of these customers spends per order.', 'sourcesay' ) ),
 		];
 	}
 
@@ -1332,6 +1471,7 @@
 			el( 'span', { class: 'ss-legend__item' }, el( 'span', { class: 'ss-swatch' } ), __( 'Share of revenue', 'sourcesay' ) )
 		);
 
+		const changeNote = prevInfo() ? ' ' + sprintf( /* translators: %s: previous date range */ __( 'The small pill compares with the previous period (%s). Hover it to see the earlier number.', 'sourcesay' ), prevRangeText() ) : '';
 		const L = {
 			chan: __( 'Channel', 'sourcesay' ),
 			resp: __( 'Answers', 'sourcesay' ),
@@ -1361,8 +1501,8 @@
 						el( 'span', { text: c.label } )
 					)
 				),
-				el( 'td', { class: 'is-num', 'data-label': L.resp, text: fmtNum( c.responses ) } ),
-				el( 'td', { class: 'is-num', 'data-label': L.rev, text: fmtMoney( c.revenue ) } ),
+				el( 'td', { class: 'is-num', 'data-label': L.resp }, el( 'span', { class: 'ss-numcell' }, el( 'span', { text: fmtNum( c.responses ) } ), delta( c.responses, c.prev_responses ) ) ),
+				el( 'td', { class: 'is-num', 'data-label': L.rev }, el( 'span', { class: 'ss-numcell' }, el( 'span', { text: fmtMoney( c.revenue ) } ), delta( c.revenue, c.prev_revenue, { prevText: fmtMoney( c.prev_revenue ) } ) ) ),
 				el( 'td', { class: 'is-num', 'data-label': L.aov, text: fmtMoney( c.aov ) } ),
 				el( 'td', { class: 'ss-col-bars', 'data-label': L.bars },
 					el( 'span', { class: 'ss-dual', 'aria-hidden': 'true' },
@@ -1382,8 +1522,8 @@
 					el( 'caption', { class: 'ss-sr', text: __( 'Answers and revenue by channel', 'sourcesay' ) } ),
 					el( 'thead', null, el( 'tr', null,
 						el( 'th', { scope: 'col', text: L.chan } ),
-						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.resp, __( 'How many customers picked this channel.', 'sourcesay' ) ) ),
-						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.rev, __( 'Total spent by these customers on the orders where they answered, after refunds.', 'sourcesay' ) ) ),
+						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.resp, __( 'How many customers picked this channel.', 'sourcesay' ) + changeNote ) ),
+						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.rev, __( 'Total spent by these customers on the orders where they answered, after refunds.', 'sourcesay' ) + changeNote ) ),
 						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.aov, __( 'What a customer from this channel spends per order, on average.', 'sourcesay' ) ) ),
 						el( 'th', { scope: 'col', class: 'ss-col-bars' }, labelWithTip( L.bars, __( 'Light bar: this channel’s share of all answers. Dark bar: its share of all revenue from answered orders. A longer dark bar means bigger spenders.', 'sourcesay' ) ) ),
 						el( 'th', { scope: 'col' }, labelWithTip( L.gap, __( 'Share of revenue minus share of answers, in percentage points. +5 pts means this channel brings 5 points more of your revenue than of your answers.', 'sourcesay' ) ) )
@@ -1503,6 +1643,18 @@
 	}
 
 	const isOffProblem = ( p ) => /disabl/.test( String( ( p && p.code ) || '' ) );
+	/* Hints are not problems: the survey works, but a custom thank-you page needs the block or shortcode. */
+	const isHint = ( p ) => !! p && p.code === 'custom_thankyou';
+
+	function hintBoxes( list ) {
+		return list.map( ( p ) => el( 'div', { class: 'ss-hintbox' },
+			ico( 'lightbulb' ),
+			el( 'div', { class: 'ss-hintbox__body' },
+				el( 'span', { text: p.message } ),
+				el( 'a', { class: 'ss-btn ss-btn--secondary ss-btn--sm', href: '#survey', on: { click: showMeHow } }, __( 'Show me how', 'sourcesay' ) )
+			)
+		) );
+	}
 
 	/** True when the owner has not switched the survey on yet (saved setting, or the status check says so). */
 	function surveyOff() {
@@ -1560,7 +1712,8 @@
 	}
 
 	function offCard( st ) {
-		const others = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) );
+		const others = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) && ! isHint( p ) );
+		const hints = ( st.problems || [] ).filter( isHint );
 		const tests = +st.test_orders || 0;
 		const on = el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary ss-btn--sm', on: { click: ( e ) => {
 			turnOn( e.currentTarget ).then( ( ok ) => {
@@ -1575,6 +1728,7 @@
 				el( 'p', { class: 'ss-status-card__title', text: __( 'Your survey is off', 'sourcesay' ) } ),
 				el( 'p', { class: 'ss-muted', text: __( 'Customers do not see the question yet. Only you can see it, on test orders, until you turn it on.', 'sourcesay' ) } ),
 				others.length ? el( 'ul', { class: 'ss-problems', 'aria-label': __( 'Also worth checking', 'sourcesay' ) }, others.map( ( p ) => el( 'li', null, el( 'span', { text: p.message } ), ' ', problemLink( p ) ) ) ) : null,
+				hintBoxes( hints ),
 				tests ? el( 'p', { class: 'ss-status-card__tests' }, sprintf( /* translators: %d: number of test orders */ _n( '%d test order exists. Test orders never appear in your reports.', '%d test orders exist. Test orders never appear in your reports.', tests, 'sourcesay' ), tests ) + ' ',
 					el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) )
 				) : null
@@ -1605,7 +1759,8 @@
 		if ( surveyOff() ) {
 			return offCard( st );
 		}
-		const problems = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) );
+		const problems = ( st.problems || [] ).filter( ( p ) => ! isOffProblem( p ) && ! isHint( p ) );
+		const hints = ( st.problems || [] ).filter( isHint );
 		const live = !! st.survey_live || ! problems.length;
 		const checkout = { block: __( 'Block checkout', 'sourcesay' ), classic: __( 'Classic checkout', 'sourcesay' ) }[ st.checkout_type ] || __( 'Not detected', 'sourcesay' );
 		const facts = el( 'dl', { class: 'ss-facts' },
@@ -1621,6 +1776,7 @@
 				el( 'p', { class: 'ss-status-card__title', text: live ? __( 'Your survey is live', 'sourcesay' ) : _n( 'One thing stops customers from seeing the survey', 'A few things stop customers from seeing the survey', problems.length || 1, 'sourcesay' ) } ),
 				live ? el( 'p', { class: 'ss-muted', text: __( 'Customers see the question on the order confirmation page right after checkout.', 'sourcesay' ) } ) : null,
 				problems.length ? el( 'ul', { class: 'ss-problems', 'aria-label': live ? __( 'Worth checking', 'sourcesay' ) : __( 'Problems', 'sourcesay' ) }, problems.map( ( p ) => el( 'li', null, el( 'span', { text: p.message } ), ' ', problemLink( p ) ) ) ) : null,
+				hintBoxes( hints ),
 				facts,
 				tests ? el( 'p', { class: 'ss-status-card__tests' }, sprintf( /* translators: %d: number of test orders */ _n( '%d test order exists. Test orders never appear in your reports.', '%d test orders exist. Test orders never appear in your reports.', tests, 'sourcesay' ), tests ) + ' ',
 					el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) )
@@ -1661,6 +1817,7 @@
 			if ( first && s && ! s.setup_done ) {
 				S.setupOpen = true;
 			}
+			fillI18nNote();
 			if ( S.tab === 'reports' && ! ( S.setupOpen && S.setup.step !== 1 ) ) {
 				render();
 			}
@@ -1921,7 +2078,8 @@
 			) ) );
 			return;
 		}
-		const problems = ( ( S.status && S.status.problems ) || [] ).filter( ( p ) => ! isOffProblem( p ) );
+		const problems = ( ( S.status && S.status.problems ) || [] ).filter( ( p ) => ! isOffProblem( p ) && ! isHint( p ) );
+		const setupHints = ( ( S.status && S.status.problems ) || [] ).filter( isHint );
 		let panel;
 		if ( st.test === 'waiting' ) {
 			panel = el( 'div', { class: 'ss-wait', role: 'status' },
@@ -1964,6 +2122,7 @@
 			title( __( 'See it live', 'sourcesay' ), __( 'Place a test order and answer the question, just like a customer would.', 'sourcesay' ) ),
 			off ? el( 'div', { class: 'ss-notice', style: 'margin-top:16px' }, ico( 'info' ), el( 'div', { class: 'ss-notice__body' }, el( 'span', { text: __( 'Your survey is still off. Test orders show it anyway: only you can see it on test orders until you turn it on.', 'sourcesay' ) } ) ) ) : null,
 			problems.length ? el( 'div', { class: 'ss-notice ss-notice--warning', style: 'margin-top:16px' }, ico( 'warning' ), el( 'div', { class: 'ss-notice__body' }, el( 'span', { text: problems.map( ( p ) => p.message ).join( ' ' ) } ), el( 'a', { class: 'ss-btn ss-btn--secondary ss-btn--sm', href: '#survey', text: __( 'Open Survey', 'sourcesay' ) } ) ) ) : null,
+			setupHints.length ? el( 'div', { style: 'margin-top:16px' }, hintBoxes( setupHints ) ) : null,
 			el( 'div', { style: 'margin-top:20px' }, panel ),
 			off ? el( 'p', { class: 'ss-field__help ss-setup__golive', text: __( 'Testing is optional. When you turn the survey on, customers see the question after their next order.', 'sourcesay' ) } ) : null,
 			foot(
@@ -1987,25 +2146,40 @@
 		const hooks = table( [ __( 'Hook', 'sourcesay' ), __( 'Type', 'sourcesay' ), __( 'Arguments', 'sourcesay' ), __( 'Use it to', 'sourcesay' ) ], [
 			[ 'sourcesay_should_display', __( 'Filter', 'sourcesay' ), '$show, $order, $context', __( 'Hide or force the survey for some orders. $context is "thankyou" or "account".', 'sourcesay' ) ],
 			[ 'sourcesay_response_data', __( 'Filter', 'sourcesay' ), '$data, $order', __( 'Change the row before it is saved.', 'sourcesay' ) ],
-			[ 'sourcesay_response_saved', __( 'Action', 'sourcesay' ), '$id, $data, $order', __( 'Send each new answer to a CRM, Slack or analytics.', 'sourcesay' ) ],
+			[ 'sourcesay_response_saved', __( 'Action', 'sourcesay' ), '$id, $data, $order', __( 'Send each new answer to a CRM, Slack or analytics. Also fires for skips: check that $data[\'answer_id\'] is not "__skip".', 'sourcesay' ) ],
+			[ 'sourcesay_order_total_base', __( 'Filter', 'sourcesay' ), '$base, $order', __( 'Convert an order total to your main store currency when your currency plugin is not detected (Aelia, WooPayments, CURCY and WPML are built in).', 'sourcesay' ) ],
 		] );
 		const ex1 = "// Do not ask customers who paid by bank transfer.\nadd_filter( 'sourcesay_should_display', function ( $show, $order, $context ) {\n\tif ( 'bacs' === $order->get_payment_method() ) {\n\t\treturn false;\n\t}\n\treturn $show;\n}, 10, 3 );";
 		const ex2 = "// Add the answer to the order notes.\nadd_action( 'sourcesay_response_saved', function ( $id, $data, $order ) {\n\t$order->add_order_note( 'Heard about us: ' . $data['answer_label'] );\n}, 10, 3 );";
 		const ex3 = "// Keep follow-up text short.\nadd_filter( 'sourcesay_response_data', function ( $data, $order ) {\n\t$data['followup_text'] = mb_substr( (string) $data['followup_text'], 0, 120 );\n\treturn $data;\n}, 10, 2 );";
 		const rest = table( [ __( 'Route', 'sourcesay' ), __( 'Method', 'sourcesay' ), __( 'Who can call it', 'sourcesay' ), __( 'What it does', 'sourcesay' ) ], [
-			[ NS + '/response', 'POST', __( 'Anyone with the order key', 'sourcesay' ), __( 'Saves an answer. Body: order_id, order_key, answer_id, followup_text, other_text. Limited to 10 calls per 10 minutes per visitor.', 'sourcesay' ) ],
+			[ NS + '/response', 'POST', __( 'Anyone with the order key', 'sourcesay' ), __( 'Saves an answer. Body: order_id, order_key, answer_id, followup_text, other_text. Send answer_id "__skip" to record a skip (only when the skip button is on). Limited to 10 calls per 10 minutes per visitor.', 'sourcesay' ) ],
 			[ NS + '/admin/report', 'GET', __( 'Shop managers', 'sourcesay' ), __( 'Report data. Optional from and to (YYYY-MM-DD, store time).', 'sourcesay' ) ],
 			[ NS + '/admin/settings', 'GET, POST', __( 'Shop managers', 'sourcesay' ), __( 'Read or save the survey settings.', 'sourcesay' ) ],
 			[ NS + '/admin/status', 'GET', __( 'Shop managers', 'sourcesay' ), __( 'Is the survey live, and what is stopping it.', 'sourcesay' ) ],
 			[ NS + '/admin/test-order', 'POST', __( 'Shop managers', 'sourcesay' ), __( 'Creates a test order and returns its confirmation page URL.', 'sourcesay' ) ],
 			[ NS + '/admin/test-orders', 'DELETE', __( 'Shop managers', 'sourcesay' ), __( 'Deletes every test order and its answer.', 'sourcesay' ) ],
 		] );
+		const embed = table( [ __( 'Name', 'sourcesay' ), __( 'Type', 'sourcesay' ), __( 'Details', 'sourcesay' ) ], [
+			[ '[sourcesay]', __( 'Shortcode', 'sourcesay' ), __( 'Shows the survey on a custom thank-you page. Optional order_id attribute, for example [sourcesay order_id="123"]. Prints nothing when no order or a wrong order key is found.', 'sourcesay' ) ],
+			[ 'sourcesay/survey', __( 'Block', 'sourcesay' ), __( 'Dynamic block, shown in the inserter as “SourceSay survey”. Same output as the shortcode.', 'sourcesay' ) ],
+			[ 'order-received, order_id, order, wcf-order, order-id', __( 'Order lookup', 'sourcesay' ), __( 'Where the order ID is read from: the WooCommerce endpoint, then these URL parameters.', 'sourcesay' ) ],
+			[ 'key, order_key, wcf-key', __( 'Order key', 'sourcesay' ), __( 'URL parameters checked for the order key. It must match the order, otherwise nothing is shown.', 'sourcesay' ) ],
+		] );
+		const keys = table( [ __( 'Key', 'sourcesay' ), __( 'Values', 'sourcesay' ), __( 'Meaning', 'sourcesay' ) ], [
+			[ 'placement', '"auto" | "manual"', __( 'auto: shown on the WooCommerce thank-you page. manual: only where the block or shortcode is placed. The survey renders once per page either way.', 'sourcesay' ) ],
+			[ 'audience', '"all" | "new"', __( 'new: skip customers who had an earlier paid order (same rule as “returning” in reports).', 'sourcesay' ) ],
+			[ 'allow_skip', 'true | false', __( 'Shows the skip button. A skip stores a row with answer_id "__skip" so the survey is not shown again.', 'sourcesay' ) ],
+			[ 'skip_label', __( 'text, max 40', 'sourcesay' ), __( 'Skip button text. Stored as the answer label of skip rows.', 'sourcesay' ) ],
+			[ '__skip', __( 'answer_id value', 'sourcesay' ), __( 'Never counted as an answer. Reports show it as totals.skipped and totals.skip_rate; the CSV shows “Skipped”; the orders filter has a “Skipped” option.', 'sourcesay' ) ],
+		] );
+		const settingsEx = "// Read the survey settings in your own code.\n$settings = sourcesay_get_settings();\nif ( 'manual' === $settings['placement'] ) {\n\t// Only shown where [sourcesay] or the block is placed.\n}";
 		const curl = "curl -X POST '" + base + "/response' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"order_id\":123,\"order_key\":\"wc_order_abc123\",\"answer_id\":\"instagram\"}'";
 		const csv = table( [ __( 'Column', 'sourcesay' ), __( 'Meaning', 'sourcesay' ) ], [
 			[ 'date', __( 'When the customer answered (store time)', 'sourcesay' ) ],
 			[ 'order_id', __( 'WooCommerce order ID', 'sourcesay' ) ],
 			[ 'order_number', __( 'Order number as customers see it', 'sourcesay' ) ],
-			[ 'answer', __( 'The answer label they picked', 'sourcesay' ) ],
+			[ 'answer', __( 'The answer label they picked, or “Skipped”', 'sourcesay' ) ],
 			[ 'follow_up', __( 'Follow-up text, if any', 'sourcesay' ) ],
 			[ 'other', __( 'Text typed for “Other”, if any', 'sourcesay' ) ],
 			[ 'order_total', __( 'Order total minus refunds', 'sourcesay' ) ],
@@ -2022,6 +2196,12 @@
 			codeBlock( ex1, 'sourcesay_should_display' ),
 			codeBlock( ex2, 'sourcesay_response_saved' ),
 			codeBlock( ex3, 'sourcesay_response_data' ),
+			el( 'h3', { class: 'ss-card__sub', text: __( 'Block and shortcode', 'sourcesay' ) } ),
+			embed,
+			el( 'h3', { class: 'ss-card__sub', text: __( 'Settings keys', 'sourcesay' ) } ),
+			el( 'p', { class: 'ss-field__help' }, __( 'Stored in the option', 'sourcesay' ) + ' ', el( 'code', { text: 'sourcesay_settings' } ), ' ' + __( 'and returned by GET /admin/settings. These keys control placement, audience and skipping:', 'sourcesay' ) ),
+			keys,
+			codeBlock( settingsEx, 'sourcesay_get_settings()' ),
 			el( 'h3', { class: 'ss-card__sub', text: __( 'REST API', 'sourcesay' ) } ),
 			el( 'p', { class: 'ss-field__help' }, __( 'Base URL:', 'sourcesay' ) + ' ', el( 'code', { text: base } ), ' ' + __( 'Admin routes need a logged-in user who can manage WooCommerce (cookie and X-WP-Nonce header, or an application password).', 'sourcesay' ) ),
 			rest,
@@ -2424,6 +2604,7 @@
 					d.question = v;
 					changed();
 				} } ),
+				skipControls( d ),
 				presetKeys.length ? el( 'div', null,
 					el( 'div', { class: 'ss-inline' },
 						el( 'div', { class: 'ss-field' }, el( 'label', { class: 'ss-field__label', for: 'ss-preset', text: __( 'Start from a preset', 'sourcesay' ) } ), presetSel ),
@@ -2513,7 +2694,7 @@
 		const pills = [ 46, 30, 52, 38, 34 ].map( ( w ) => el( 'i', { style: 'width:' + w + 'px' } ) );
 		const lines = [ 1, 2, 3 ].map( () => el( 'i' ) );
 
-		const lookCard = card( { title: __( 'Look and placement', 'sourcesay' ) },
+		const lookCard = card( { title: __( 'Look and messages', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				toggle( { label: __( 'Shuffle the answers for each order', 'sourcesay' ), help: __( 'Prevents the first answer from being picked more often just because it is first. “Other” stays last.', 'sourcesay' ), checked: d.shuffle, onChange: ( v ) => {
 					d.shuffle = v;
@@ -2524,10 +2705,6 @@
 					choice( 'buttons', __( 'Buttons', 'sourcesay' ), pills ),
 					choice( 'list', __( 'List', 'sourcesay' ), lines )
 				),
-				selectField( { label: __( 'Position on the confirmation page', 'sourcesay' ), value: d.position, options: [ [ 'after', __( 'After the order details', 'sourcesay' ) ], [ 'before', __( 'Before the order details', 'sourcesay' ) ] ], onChange: ( v ) => {
-					d.position = v;
-					changed();
-				} } ),
 				el( 'fieldset', { class: 'ss-field', style: 'border:0;margin:0;padding:0' },
 					el( 'legend', { class: 'ss-field__label', text: __( 'Accent colour', 'sourcesay' ) } ),
 					accentRadio( 'inherit', __( 'Match my theme', 'sourcesay' ) ),
@@ -2550,14 +2727,127 @@
 		}, true );
 		const previewCard = card( { title: __( 'Preview', 'sourcesay' ), desc: __( 'Try it: click an answer. Your theme sets the final font and colours.', 'sourcesay' ), actions: widthSeg }, R.preview );
 
+		R.i18nNote = el( 'div', { class: 'ss-i18n-slot' } );
+		fillI18nNote();
+		wrap.appendChild( R.i18nNote );
 		wrap.appendChild( el( 'div', { class: 'ss-builder' },
-			el( 'div', { class: 'ss-stack' }, qCard, optsCard, otherCard, lookCard ),
+			el( 'div', { class: 'ss-stack' }, qCard, optsCard, otherCard, placementCard( d ), audienceCard( d ), lookCard ),
 			el( 'div', { class: 'ss-builder__side' }, previewCard )
 		) );
 		wrap.appendChild( saveBar() );
 		renderOpts();
 		renderPreview();
 		updateErrors();
+	}
+
+	/* ---------- Survey tab: skip, placement, audience, translation ---------- */
+	function skipControls( d ) {
+		const labelField = textField( { label: __( 'Skip button text', 'sourcesay' ), value: d.skip_label, max: 40, errKey: 'skip_label', help: __( 'Short and friendly works best, for example “Prefer not to say” or “Skip”.', 'sourcesay' ), onInput: ( v ) => {
+			d.skip_label = v;
+			changed();
+		} } );
+		labelField.hidden = ! d.allow_skip;
+		return el( 'div', { class: 'ss-stack ss-stack--tight' },
+			toggle( { label: __( 'Show a “Prefer not to say” button', 'sourcesay' ), help: __( 'A small, quiet link under the answers. Customers who press it are not asked again for that order. Skips are counted on their own and never as an answer, so your channel numbers stay accurate.', 'sourcesay' ), checked: d.allow_skip, onChange: ( v ) => {
+				d.allow_skip = v;
+				labelField.hidden = ! v;
+				changed();
+			} } ),
+			labelField
+		);
+	}
+
+	function copyRow( label, value, what ) {
+		return el( 'div', { class: 'ss-copyrow' },
+			el( 'span', { class: 'ss-copyrow__label', text: label } ),
+			el( 'code', { class: 'ss-copyrow__value', text: value } ),
+			el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary ss-btn--sm', 'aria-label': sprintf( /* translators: %s: what is copied, e.g. the shortcode */ __( 'Copy %s', 'sourcesay' ), what ), on: { click: () => copyText( value ) } }, __( 'Copy', 'sourcesay' ) )
+		);
+	}
+
+	function placementCard( d ) {
+		const name = uid( 'place' );
+		const position = selectField( { label: __( 'Position on the confirmation page', 'sourcesay' ), value: d.position, options: [ [ 'after', __( 'After the order details', 'sourcesay' ) ], [ 'before', __( 'Before the order details', 'sourcesay' ) ] ], onChange: ( v ) => {
+			d.position = v;
+			changed();
+		} } );
+		position.hidden = d.placement === 'manual';
+		const manualNote = el( 'div', { class: 'ss-notice', hidden: d.placement !== 'manual' }, ico( 'info' ), el( 'span', { text: __( 'The survey only appears where you add it. Until you add it to your thank-you page, customers do not see it.', 'sourcesay' ) } ) );
+		const pick = ( val ) => {
+			d.placement = val;
+			position.hidden = val === 'manual';
+			manualNote.hidden = val !== 'manual';
+			changed();
+		};
+		const option = ( val, title, text, icon ) => el( 'label', { class: 'ss-choice ss-choice--opt' },
+			el( 'input', { type: 'radio', name, value: val, checked: ( d.placement || 'auto' ) === val, on: { change: () => pick( val ) } } ),
+			el( 'span', { class: 'ss-choice__icon', 'aria-hidden': 'true' }, ico( icon ) ),
+			el( 'span', { class: 'ss-choice__name', text: title } ),
+			el( 'span', { class: 'ss-field__help', text } )
+		);
+		const builders = details( __( 'Using FunnelKit, CartFlows, Elementor or Bricks thank-you pages?', 'sourcesay' ), [
+			el( 'p', { class: 'ss-field__help ss-builders__text', text: __( 'Open your custom thank-you page in its editor and add the SourceSay survey block, or paste [sourcesay] into a Shortcode element (Elementor, Bricks) or a text block (FunnelKit, CartFlows).', 'sourcesay' ) } ),
+			el( 'p', { class: 'ss-field__help ss-builders__text', text: __( 'The survey finds the order from the page address by itself. Then choose “Only where I add the SourceSay block or shortcode” above.', 'sourcesay' ) } ),
+		] );
+		return el( 'div', { 'data-jump': 'placement', class: 'ss-jump' }, card( { title: __( 'Where the survey appears', 'sourcesay' ), desc: __( 'Most stores keep the automatic option. Pick the second one if your thank-you page is built with a page builder or funnel plugin.', 'sourcesay' ) },
+			el( 'div', { class: 'ss-stack' },
+				el( 'fieldset', { class: 'ss-choices ss-choices--stack' },
+					el( 'legend', { class: 'ss-sr', text: __( 'Where the survey appears', 'sourcesay' ) } ),
+					option( 'auto', __( 'Automatically on the thank-you page', 'sourcesay' ), __( 'Shown on the standard WooCommerce order confirmation page, with classic or block checkout. Nothing to set up.', 'sourcesay' ), 'check' ),
+					option( 'manual', __( 'Only where I add the SourceSay block or shortcode', 'sourcesay' ), __( 'For custom thank-you pages. The survey shows up only where you place it.', 'sourcesay' ), 'list' )
+				),
+				position,
+				manualNote,
+				el( 'div', { class: 'ss-copybox' },
+					el( 'p', { class: 'ss-field__label', text: __( 'Add it to any page', 'sourcesay' ) } ),
+					copyRow( __( 'Shortcode', 'sourcesay' ), '[sourcesay]', __( 'the shortcode', 'sourcesay' ) ),
+					copyRow( __( 'Block', 'sourcesay' ), __( 'SourceSay survey', 'sourcesay' ), __( 'the block name', 'sourcesay' ) ),
+					el( 'p', { class: 'ss-field__help', text: __( 'In the block editor, click + and search for the block name. The survey shows only once per page, even when the automatic option is on too.', 'sourcesay' ) } ),
+					builders
+				)
+			)
+		) );
+	}
+
+	function audienceCard( d ) {
+		const name = uid( 'aud' );
+		const option = ( val, title, text ) => el( 'label', { class: 'ss-choice ss-choice--opt ss-choice--plain' },
+			el( 'input', { type: 'radio', name, value: val, checked: ( d.audience || 'all' ) === val, on: { change: () => {
+				d.audience = val;
+				changed( { preview: false } );
+			} } } ),
+			el( 'span', { class: 'ss-choice__name', text: title } ),
+			el( 'span', { class: 'ss-field__help', text } )
+		);
+		return card( { title: __( 'Who to ask', 'sourcesay' ) },
+			el( 'div', { class: 'ss-stack' },
+				el( 'fieldset', { class: 'ss-choices' },
+					el( 'legend', { class: 'ss-sr', text: __( 'Who to ask', 'sourcesay' ) } ),
+					option( 'all', __( 'Everyone', 'sourcesay' ), __( 'Every order gets the question until it is answered or skipped, including orders from repeat customers.', 'sourcesay' ) ),
+					option( 'new', __( 'Only first-time customers', 'sourcesay' ), __( 'Customers who already paid for an earlier order are not asked again. Best when you want to know what brings in new customers.', 'sourcesay' ) )
+				),
+				el( 'p', { class: 'ss-field__help', text: __( 'Customers are recognised by their account, or by billing email for guest orders. Test orders always show the survey.', 'sourcesay' ) } )
+			)
+		);
+	}
+
+	function fillI18nNote() {
+		if ( ! R.i18nNote ) {
+			return;
+		}
+		R.i18nNote.textContent = '';
+		const plugin = S.status && S.status.translation_plugin;
+		const where = {
+			wpml: { text: __( 'Translate these texts in WPML › String Translation (look for the “SourceSay” context).', 'sourcesay' ), href: 'admin.php?page=wpml-string-translation/menu/string-translation.php&context=SourceSay', link: __( 'Open String Translation', 'sourcesay' ) },
+			polylang: { text: __( 'Translate these texts in Polylang › Translations (look for the “SourceSay” group).', 'sourcesay' ), href: 'admin.php?page=mlang_strings&group=SourceSay', link: __( 'Open Translations', 'sourcesay' ) },
+		}[ plugin ];
+		if ( ! where ) {
+			return;
+		}
+		R.i18nNote.appendChild( el( 'div', { class: 'ss-notice ss-i18n' }, ico( 'globe' ), el( 'div', { class: 'ss-notice__body' },
+			el( 'span', null, el( 'strong', { text: __( 'Your store is multilingual.', 'sourcesay' ) } ), ' ' + where.text + ' ' + __( 'Save here first: new or changed texts show up there after saving.', 'sourcesay' ) ),
+			el( 'a', { class: 'ss-btn ss-btn--secondary ss-btn--sm', href: where.href }, ico( 'external' ), where.link )
+		) ) );
 	}
 
 	function addOption() {
@@ -3058,6 +3348,9 @@
 		if ( ! d.enabled ) {
 			R.preview.insertBefore( el( 'p', { class: 'ss-frame__badge' }, ico( 'eye' ), __( 'Preview only. The survey is off, so customers do not see it yet.', 'sourcesay' ) ), frame );
 		}
+		if ( d.placement === 'manual' ) {
+			notes.push( __( 'Customers see this only on pages where you added the SourceSay block or [sourcesay] shortcode.', 'sourcesay' ) );
+		}
 		if ( opts.length && d.shuffle ) {
 			notes.push( __( 'Answers are shuffled for each order. “Other” always stays last.', 'sourcesay' ) );
 		}
@@ -3116,7 +3409,13 @@
 				)
 			) ) )
 		),
-		el( 'div', { class: 'ss-more' }, fuField, d.other.enabled ? otherField : null, el( 'button', { type: 'submit', class: 'ss-send' }, el( 'span', { text: __( 'Send', 'sourcesay' ) } ) ) )
+		el( 'div', { class: 'ss-more' }, fuField, d.other.enabled ? otherField : null, el( 'button', { type: 'submit', class: 'ss-send' }, el( 'span', { text: __( 'Send', 'sourcesay' ) } ) ) ),
+		d.allow_skip ? el( 'div', { class: 'ss-skip' }, el( 'button', { type: 'button', class: 'ss-skip__btn', text: String( d.skip_label || '' ).trim() || __( 'Prefer not to say', 'sourcesay' ), on: { click: () => {
+			section.classList.remove( 'is-open' );
+			section.classList.add( 'is-skipped' );
+			section.textContent = '';
+			section.appendChild( el( 'p', { class: 'ss-done ss-done--quiet' }, el( 'span', { class: 'ss-done__icon' }, ico( 'check', 'ss-icon' ) ), el( 'span', { class: 'ss-done__text', text: __( 'No problem, thanks!', 'sourcesay' ) } ) ) );
+		} } } ) ) : null
 		);
 		section.appendChild( form );
 		return section;
@@ -3163,6 +3462,17 @@
 			)
 		);
 		const check = ( text ) => el( 'li', null, ico( 'check' ), el( 'span', { text } ) );
+		left.appendChild( card( { title: __( 'Where you see each answer', 'sourcesay' ), desc: __( 'Besides Reports, every answer also shows up where you already work.', 'sourcesay' ) },
+			el( 'div', { class: 'ss-stack' },
+				el( 'ul', { class: 'ss-list-check' },
+					check( __( 'A private order note: “Customer said: Instagram”', 'sourcesay' ) ),
+					check( __( 'The “Heard about us” column, filter and search on the Orders screen', 'sourcesay' ) ),
+					check( __( 'The customer’s user profile, under “How they found you”', 'sourcesay' ) ),
+					check( __( 'Admin emails sent after the customer answered, such as order status changes', 'sourcesay' ) )
+				),
+				el( 'div', { class: 'ss-notice' }, ico( 'info' ), el( 'span', { text: __( 'The “New order” email goes out the moment the order is placed, before the customer sees the question, so it cannot include the answer. Check the order notes or the Orders screen instead.', 'sourcesay' ) } ) )
+			)
+		) );
 		const right = card( { title: __( 'Privacy', 'sourcesay' ), desc: __( 'Answers stay in your WordPress database. Nothing is sent to SwiftWebDev or anyone else.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				el( 'div', null,

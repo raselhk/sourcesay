@@ -3031,3 +3031,343 @@ body:has(.ss-app) #wpfooter {
 		transition-duration: 0.01ms !important;
 	}
 }
+
+/* ================================================================== */
+/* Batch 2: deltas, skips, placement, audience, hints                 */
+/* ================================================================== */
+
+/* ---------- Change vs previous period ---------- */
+.ss-kpi__valrow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ss-space-1) var(--ss-space-2);
+	min-width: 0;
+}
+
+.ss-delta {
+	position: relative;
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 2px;
+	padding: 1px 7px 1px 5px;
+	border-radius: var(--ss-radius-pill);
+	background: var(--ss-bg);
+	color: var(--ss-text-2);
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-bold);
+	line-height: 1.6;
+	letter-spacing: 0;
+	white-space: nowrap;
+	cursor: default;
+}
+
+.ss-app .ss-delta > .ss-ico {
+	width: 12px;
+	height: 12px;
+}
+
+.ss-delta--up {
+	background: var(--ss-green-50);
+	color: var(--ss-success-text);
+}
+
+.ss-delta--down {
+	background: var(--ss-red-50);
+	color: var(--ss-danger-text);
+}
+
+.ss-delta--flat {
+	padding-left: 7px;
+}
+
+.ss-app .ss-delta:focus-visible {
+	outline: 2px solid var(--ss-primary);
+	outline-offset: 2px;
+}
+
+.ss-delta__tip {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 50%;
+	z-index: 50;
+	display: none;
+	width: max-content;
+	max-width: min(240px, 70vw);
+	padding: var(--ss-space-2) var(--ss-space-3);
+	border-radius: var(--ss-radius-control);
+	background: var(--ss-text);
+	color: #fff;
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-regular);
+	line-height: 1.45;
+	text-align: left;
+	white-space: normal;
+	transform: translateX(-50%);
+	pointer-events: none;
+	box-shadow: var(--ss-shadow-pop);
+}
+
+.ss-delta:hover .ss-delta__tip,
+.ss-delta:focus-visible .ss-delta__tip {
+	display: block;
+}
+
+/* KPI tiles sit in a 4-column row: keep the tip inside the viewport on the right edge. */
+.ss-span-3:last-child .ss-delta__tip {
+	left: auto;
+	right: 0;
+	transform: none;
+}
+
+/* In the channel table the scroll wrapper clips anything above row 1, so tips open to the left. */
+.ss-chan-table .ss-delta__tip {
+	top: 50%;
+	right: calc(100% + 6px);
+	bottom: auto;
+	left: auto;
+	transform: translateY(-50%);
+}
+
+.ss-numcell {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+}
+
+.ss-numcell .ss-delta {
+	padding-top: 0;
+	padding-bottom: 0;
+	font-size: 11px;
+}
+
+.ss-kpi__skip {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.ss-app .ss-kpi__skip .ss-tip {
+	margin: -4px 0;
+}
+
+/* One-line note under the KPI tiles (mixed currencies). */
+.ss-note {
+	display: flex;
+	align-items: center;
+	gap: var(--ss-space-2);
+	margin: calc(var(--ss-space-2) * -1) 0 0 !important;
+	padding: 0 var(--ss-space-1);
+	font-size: var(--ss-fs-label);
+	color: var(--ss-text-2);
+}
+
+.ss-app .ss-note .ss-ico {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	color: var(--ss-info);
+}
+
+/* ---------- Helpful blue hint (status card, setup) ---------- */
+.ss-hintbox {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ss-space-3);
+	margin-top: var(--ss-space-2);
+	padding: var(--ss-space-3) var(--ss-space-4);
+	border: var(--ss-border-w) solid #cfe0ff;
+	border-radius: 12px;
+	background: var(--ss-blue-50);
+	color: var(--ss-text);
+}
+
+.ss-app .ss-hintbox > .ss-ico {
+	flex: none;
+	width: 20px;
+	height: 20px;
+	margin-top: 1px;
+	color: var(--ss-info);
+}
+
+.ss-hintbox__body {
+	display: flex;
+	flex: 1;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ss-space-2) var(--ss-space-4);
+	min-width: 0;
+}
+
+/* ---------- Survey tab: option cards ---------- */
+.ss-choices--stack {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.ss-choice--opt {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 2px var(--ss-space-3);
+	align-items: start;
+	padding: var(--ss-space-3) var(--ss-space-4);
+	padding-right: calc(var(--ss-space-4) + 24px);
+}
+
+.ss-choice--opt .ss-choice__name,
+.ss-choice--opt .ss-field__help {
+	grid-column: 2;
+}
+
+.ss-choice--plain {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.ss-choice--plain .ss-choice__name,
+.ss-choice--plain .ss-field__help {
+	grid-column: 1;
+}
+
+.ss-choice__icon {
+	grid-row: span 2;
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: var(--ss-tile-neutral);
+	color: var(--ss-text-2);
+	transition: background var(--ss-dur-fast) var(--ss-ease), color var(--ss-dur-fast) var(--ss-ease);
+}
+
+.ss-app .ss-choice__icon .ss-ico {
+	width: 18px;
+	height: 18px;
+}
+
+.ss-choice:has(input:checked) .ss-choice__icon {
+	background: var(--ss-tile-blue);
+	color: var(--ss-primary);
+}
+
+.ss-app .ss-choice:has(input:focus-visible) {
+	outline: 2px solid var(--ss-primary);
+	outline-offset: 2px;
+}
+
+/* Shortcode + block name with copy buttons. */
+.ss-copybox {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ss-space-2);
+	padding: var(--ss-space-4);
+	border: var(--ss-border-w) dashed var(--ss-border-strong);
+	border-radius: 12px;
+	background: var(--ss-bg);
+}
+
+.ss-copyrow {
+	display: grid;
+	grid-template-columns: 84px minmax(0, 1fr) auto;
+	gap: var(--ss-space-3);
+	align-items: center;
+	min-height: var(--ss-touch);
+}
+
+.ss-copyrow__label {
+	font-size: var(--ss-fs-label);
+	color: var(--ss-text-2);
+}
+
+.ss-app .ss-copyrow__value {
+	justify-self: start;
+	max-width: 100%;
+	padding: 4px 10px;
+	border: var(--ss-border-w) solid var(--ss-border);
+	border-radius: var(--ss-radius-control);
+	background: var(--ss-card);
+	color: var(--ss-text);
+	font-family: ui-monospace, sfmono-regular, menlo, consolas, monospace;
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-semibold);
+	overflow-wrap: anywhere;
+	user-select: all;
+}
+
+.ss-copybox .ss-details {
+	margin-top: var(--ss-space-1);
+	border-top: var(--ss-border-w) solid var(--ss-border);
+}
+
+.ss-copybox .ss-details__summary {
+	min-height: var(--ss-touch);
+	padding: var(--ss-space-2) 0;
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-semibold);
+	color: var(--ss-primary);
+	border-radius: var(--ss-radius-control);
+}
+
+.ss-copybox .ss-details__body {
+	gap: var(--ss-space-2);
+	padding: 0 0 var(--ss-space-1);
+}
+
+.ss-builders__text {
+	max-width: 70ch;
+}
+
+.ss-stack--tight {
+	gap: var(--ss-space-3);
+}
+
+/* "Show me how" lands here: offset for the admin bar, brief highlight. */
+.ss-jump {
+	scroll-margin-top: 96px;
+}
+
+.ss-jump.is-flash > .ss-card {
+	animation: ss-jump-flash 1.6s var(--ss-ease);
+}
+
+@keyframes ss-jump-flash {
+
+	0%,
+	30% {
+		box-shadow: 0 0 0 3px var(--ss-primary), var(--ss-shadow-card);
+	}
+}
+
+.ss-jump .ss-card__title:focus {
+	outline: none;
+}
+
+.ss-i18n-slot:empty {
+	display: none;
+}
+
+.ss-i18n-slot {
+	margin-bottom: var(--ss-space-5);
+}
+
+@media (max-width: 600px) {
+
+	.ss-copyrow {
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: var(--ss-space-1) var(--ss-space-3);
+	}
+
+	.ss-copyrow__label {
+		grid-column: 1 / -1;
+	}
+
+	.ss-numcell {
+		align-items: flex-start;
+	}
+
+	.ss-hintbox__body .ss-btn {
+		width: 100%;
+	}
+}

@@ -18,13 +18,14 @@
 			return;
 		}
 		var radios = form.querySelectorAll( '.ss-radio' );
-		var more = form.querySelector( '.ss-more' );
 		var fu = form.querySelector( '.ss-field--followup' );
 		var other = form.querySelector( '.ss-field--other' );
 		var status = form.querySelector( '.ss-status' );
 		var send = form.querySelector( '.ss-send' );
+		var skip = form.querySelector( '.ss-skip__btn' );
 		var keyChoose = false;
 		var busy = false;
+		var lastSkip = false;
 		var fuLabel = fu && fu.querySelector( 'label' );
 		var defaultFuLabel = fuLabel ? fuLabel.textContent : '';
 
@@ -63,6 +64,20 @@
 			status.textContent = text || '';
 		}
 
+		function setBusy( on ) {
+			busy = on;
+			root.classList.toggle( 'is-busy', on );
+			if ( on ) {
+				root.setAttribute( 'aria-busy', 'true' );
+			} else {
+				root.removeAttribute( 'aria-busy' );
+			}
+			send.disabled = on;
+			if ( skip ) {
+				skip.disabled = on;
+			}
+		}
+
 		function showError( message ) {
 			setStatus( '' );
 			var box = form.querySelector( '.ss-error' );
@@ -79,7 +94,9 @@
 			retry.type = 'button';
 			retry.className = 'ss-retry';
 			retry.textContent = t.retry || 'Try again';
-			retry.addEventListener( 'click', submit );
+			retry.addEventListener( 'click', function () {
+				submit( lastSkip );
+			} );
 			box.appendChild( msg );
 			box.appendChild( retry );
 		}
@@ -91,9 +108,10 @@
 			}
 		}
 
-		function done( message ) {
+		// quiet: the customer skipped, so a small line replaces the survey instead of the big thank-you.
+		function done( message, quiet ) {
 			var p = document.createElement( 'p' );
-			p.className = 'ss-done';
+			p.className = 'ss-done' + ( quiet ? ' ss-done--quiet' : '' );
 			var icon = document.createElement( 'span' );
 			icon.className = 'ss-done__icon';
 			if ( t.sprite ) {
@@ -106,35 +124,38 @@
 			p.appendChild( icon );
 			p.appendChild( text );
 			root.classList.remove( 'is-busy', 'is-open' );
+			root.removeAttribute( 'aria-busy' );
 			root.classList.add( 'is-done' );
+			if ( quiet ) {
+				root.classList.add( 'is-skipped' );
+			}
 			root.setAttribute( 'aria-live', 'polite' );
 			p.tabIndex = -1;
 			root.replaceChild( p, form );
 			p.focus( { preventScroll: true } );
 		}
 
-		function submit() {
-			var radio = current();
-			if ( ! radio || busy ) {
+		// isSkip: the skip button was pressed. Sends answer_id "__skip" and no texts.
+		function submit( isSkip ) {
+			var radio = isSkip ? null : current();
+			if ( busy || ( ! isSkip && ! radio ) ) {
 				return;
 			}
-			busy = true;
+			lastSkip = !! isSkip;
 			clearError();
-			root.classList.add( 'is-busy' );
-			root.setAttribute( 'aria-busy', 'true' );
-			send.disabled = true;
+			setBusy( true );
 			setStatus( t.sending || '' );
 			var body = {
 				order_id: cfg.orderId,
 				order_key: cfg.orderKey,
-				answer_id: radio.value,
+				answer_id: isSkip ? '__skip' : radio.value,
 				context: cfg.context,
 				ss_website: ( form.elements.ss_website || {} ).value || '',
 			};
-			if ( fu && ! fu.hidden && radio.hasAttribute( 'data-followup' ) ) {
+			if ( radio && fu && ! fu.hidden && radio.hasAttribute( 'data-followup' ) ) {
 				body.followup_text = fu.querySelector( 'input' ).value.trim();
 			}
-			if ( other && ! other.hidden && radio.hasAttribute( 'data-other' ) ) {
+			if ( radio && other && ! other.hidden && radio.hasAttribute( 'data-other' ) ) {
 				body.other_text = other.querySelector( 'input' ).value.trim();
 			}
 			fetch( cfg.rest, {
@@ -153,16 +174,17 @@
 				.then( function ( r ) {
 					// 409 = this order already has an answer: nothing more to ask.
 					if ( ( r.status === 200 && r.json.ok ) || r.status === 409 ) {
-						done( r.json.ok ? r.json.message : cfg.thankYou );
+						if ( lastSkip && r.status === 200 ) {
+							done( t.skipped || 'No problem, thanks!', true );
+						} else {
+							done( r.json.ok ? r.json.message : cfg.thankYou );
+						}
 						return;
 					}
 					throw r;
 				} )
 				.catch( function ( r ) {
-					busy = false;
-					root.classList.remove( 'is-busy' );
-					root.removeAttribute( 'aria-busy' );
-					send.disabled = false;
+					setBusy( false );
 					var msg = t.error;
 					if ( r && r.status === 429 ) {
 						msg = t.limit;
@@ -194,10 +216,18 @@
 					open( radio, true );
 				} else {
 					root.classList.remove( 'is-open' );
-					submit();
+					submit( false );
 				}
 			} );
 		} );
+
+		if ( skip ) {
+			skip.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+				root.classList.remove( 'is-open' );
+				submit( true );
+			} );
+		}
 
 		form.addEventListener( 'submit', function ( e ) {
 			e.preventDefault();
@@ -209,7 +239,7 @@
 				open( radio, true );
 				return;
 			}
-			submit();
+			submit( false );
 		} );
 	}
 
