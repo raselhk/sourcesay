@@ -1,0 +1,422 @@
+/*
+ * SourceSay thank-you survey. Inherits the theme font and colours.
+ * Accent: --ss-accent (set inline from settings) > theme primary preset > currentColor.
+ */
+
+.ss-survey {
+	--ss-a: var(--ss-accent, var(--wp--preset--color--primary, currentColor));
+	--ss-on-a: var(--wp--preset--color--base, #fff);
+	--ss-line: rgba(127, 127, 127, 0.35);
+	--ss-line: color-mix(in srgb, currentColor 20%, transparent);
+	--ss-soft: rgba(127, 127, 127, 0.08);
+	--ss-soft: color-mix(in srgb, var(--ss-a) 7%, transparent);
+	--ss-tint: rgba(127, 127, 127, 0.14);
+	--ss-tint: color-mix(in srgb, var(--ss-a) 12%, transparent);
+	--ss-err: #b91c1c;
+
+	box-sizing: border-box;
+	margin: 2em 0;
+	padding: clamp(1rem, 4vw, 1.5rem);
+	border: 1px solid var(--ss-line);
+	border-radius: 12px;
+	font: inherit;
+	color: inherit;
+	text-align: start;
+}
+
+.ss-survey *,
+.ss-survey *::before,
+.ss-survey *::after {
+	box-sizing: border-box;
+}
+
+.ss-survey [hidden] {
+	display: none !important;
+}
+
+.ss-survey .ss-form,
+.ss-survey .ss-fieldset {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	min-width: 0;
+}
+
+.ss-survey .ss-question {
+	display: block;
+	float: none;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	font-size: 1.125em;
+	font-weight: 600;
+	line-height: 1.3;
+	color: inherit;
+}
+
+.ss-survey .ss-hint {
+	margin: 0.25em 0 0;
+	font-size: 0.875em;
+	opacity: 0.75;
+}
+
+/* Honeypot: off-screen, never focusable. */
+.ss-survey .ss-hp {
+	position: absolute !important;
+	left: -10000px !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+/* ---------- Options ---------- */
+.ss-survey .ss-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 1rem 0 0;
+	padding: 0;
+}
+
+.ss-survey .ss-option {
+	position: relative;
+	display: block;
+	margin: 0;
+	padding: 0;
+	cursor: pointer;
+	font-weight: inherit;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.ss-survey .ss-radio {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+	appearance: none;
+}
+
+.ss-survey .ss-option__box {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	min-height: 44px;
+	padding: 0.5em 1em;
+	border: 1px solid var(--ss-line);
+	border-radius: 999px;
+	background: transparent;
+	font-size: 0.9375em;
+	line-height: 1.25;
+	transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+	touch-action: manipulation;
+}
+
+.ss-survey .ss-icon {
+	flex: none;
+	width: 1.25em;
+	height: 1.25em;
+	color: var(--ss-a);
+	fill: currentColor;
+}
+
+.ss-survey .ss-option__dot {
+	display: none;
+}
+
+.ss-survey .ss-option:hover .ss-option__box {
+	border-color: var(--ss-a);
+	background: var(--ss-soft);
+}
+
+.ss-survey .ss-option:active .ss-option__box {
+	transform: scale(0.98);
+}
+
+.ss-survey .ss-radio:checked + .ss-option__box {
+	border-color: var(--ss-a);
+	background: var(--ss-tint);
+	box-shadow: inset 0 0 0 1px var(--ss-a);
+}
+
+.ss-survey .ss-radio:focus-visible + .ss-option__box {
+	outline: 2px solid var(--ss-a);
+	outline-offset: 2px;
+}
+
+/* List layout: stacked rows with a radio dot. */
+.ss-survey.ss-layout-list .ss-options {
+	flex-direction: column;
+	flex-wrap: nowrap;
+}
+
+.ss-survey.ss-layout-list .ss-option__box {
+	min-height: 52px;
+	padding: 0.625em 1em;
+	border-radius: 10px;
+}
+
+.ss-survey.ss-layout-list .ss-option__label {
+	flex: 1;
+}
+
+.ss-survey.ss-layout-list .ss-option__dot {
+	display: block;
+	flex: none;
+	width: 1.125em;
+	height: 1.125em;
+	border: 2px solid var(--ss-line);
+	border-radius: 50%;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ss-survey.ss-layout-list .ss-radio:checked + .ss-option__box .ss-option__dot {
+	border-color: var(--ss-a);
+	box-shadow: inset 0 0 0 3px var(--ss-on-a), inset 0 0 0 10px var(--ss-a);
+}
+
+/* ---------- Follow-up / Other text + Send ---------- */
+.ss-survey .ss-more {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.75rem;
+	margin-top: 1rem;
+}
+
+.ss-survey .ss-field {
+	display: flex;
+	flex: 1 1 16rem;
+	flex-direction: column;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.ss-survey .ss-field__label {
+	margin: 0;
+	font-size: 0.875em;
+	font-weight: 600;
+}
+
+.ss-survey .ss-input {
+	width: 100%;
+	min-height: 44px;
+	margin: 0;
+	padding: 0.5em 0.875em;
+	border: 1px solid var(--ss-line);
+	border-radius: 8px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: max(16px, 1em); /* no iOS zoom */
+}
+
+.ss-survey .ss-input:focus {
+	border-color: var(--ss-a);
+	outline: 2px solid var(--ss-a);
+	outline-offset: 1px;
+}
+
+.ss-survey .ss-send {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
+	min-height: 44px;
+	margin: 0;
+	padding: 0.5em 1.375em;
+	border: 0;
+	border-radius: 999px;
+	background: var(--ss-a);
+	color: var(--ss-on-a);
+	font: inherit;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ss-survey .ss-send:hover {
+	opacity: 0.9;
+}
+
+.ss-survey .ss-send:active {
+	transform: scale(0.98);
+}
+
+.ss-survey .ss-send:focus-visible {
+	outline: 2px solid var(--ss-a);
+	outline-offset: 3px;
+}
+
+.ss-survey .ss-send:disabled {
+	opacity: 0.6;
+	cursor: progress;
+}
+
+/* No-JS: reveal the Other box only when Other is picked (where :has is supported). */
+@supports selector(:has(a)) {
+
+	.ss-survey:not(.ss-js) .ss-field--other {
+		display: none;
+	}
+
+	.ss-survey:not(.ss-js):has(.ss-radio[value="other"]:checked) .ss-field--other {
+		display: flex;
+	}
+}
+
+/* With JS: the follow-up area stays hidden until an option needs it. */
+.ss-survey.ss-js .ss-more {
+	display: none;
+}
+
+.ss-survey.ss-js.is-open .ss-more {
+	display: flex;
+	animation: ss-in 0.2s ease-out;
+}
+
+/* ---------- Status, error, busy ---------- */
+.ss-survey .ss-status:empty {
+	display: none;
+}
+
+.ss-survey .ss-status {
+	margin: 0.75rem 0 0;
+	font-size: 0.875em;
+}
+
+.ss-survey .ss-error {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	margin: 0.75rem 0 0;
+	color: var(--ss-err);
+	font-size: 0.9375em;
+	font-weight: 500;
+}
+
+.ss-survey .ss-error .ss-icon {
+	color: currentColor;
+}
+
+.ss-survey .ss-retry {
+	min-height: 44px;
+	margin: 0;
+	padding: 0.25em 1em;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.ss-survey .ss-retry:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+.ss-survey.is-busy .ss-option {
+	pointer-events: none;
+}
+
+.ss-survey.is-busy .ss-option:not(:has(.ss-radio:checked)) {
+	opacity: 0.55;
+}
+
+.ss-survey.is-busy .ss-radio:checked + .ss-option__box .ss-icon {
+	visibility: hidden;
+}
+
+.ss-survey.is-busy .ss-radio:checked + .ss-option__box::before {
+	content: "";
+	position: absolute;
+	width: 1.125em;
+	height: 1.125em;
+	margin-left: 0.0625em;
+	border: 2px solid var(--ss-a);
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: ss-spin 0.7s linear infinite;
+}
+
+/* ---------- Thank-you ---------- */
+.ss-survey .ss-done {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0;
+}
+
+.ss-survey .ss-done__icon {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 50%;
+	background: var(--ss-a);
+	color: var(--ss-on-a);
+	animation: ss-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ss-survey .ss-done__icon .ss-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: currentColor;
+}
+
+.ss-survey .ss-done__text {
+	margin: 0;
+	font-size: 1.0625em;
+	font-weight: 600;
+}
+
+@keyframes ss-spin {
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes ss-in {
+
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+
+@keyframes ss-pop {
+
+	from {
+		transform: scale(0.4);
+		opacity: 0;
+	}
+}
+
+@media (max-width: 480px) {
+
+	.ss-survey.ss-layout-buttons .ss-option {
+		flex: 1 1 calc(50% - 0.25rem);
+	}
+
+	.ss-survey .ss-send {
+		width: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.ss-survey *,
+	.ss-survey *::before,
+	.ss-survey *::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
