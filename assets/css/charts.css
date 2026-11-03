@@ -1,6 +1,6 @@
 /*
  * SourceSay charts: trend chart, channel share bar, answers vs revenue bars,
- * follow-up answer bars and the Dashboard widget bars.
+ * follow-up answer bars. The Dashboard widget reuses the share bar and the channel colours.
  *
  * Palette built from the SwiftWebDev brand (blue, orange, green family) and checked
  * with the dataviz validator on white: lightness band, chroma floor, colour-blind
@@ -374,38 +374,6 @@
 	font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Dashboard widget bars ---------- */
-.sourcesay.ss-widget .ss-widget__chan {
-	display: block;
-}
-
-.sourcesay.ss-widget .ss-widget__track {
-	display: block;
-	height: 6px;
-	margin-top: 6px;
-	border-radius: 0 3px 3px 0;
-	background: var(--ss-chart-track);
-}
-
-.sourcesay.ss-widget .ss-widget__fill {
-	display: block;
-	height: 100%;
-	border-radius: inherit;
-	background: var(--ss-series-revenue);
-	transform-origin: left center;
-	animation: ss-chart-grow-x 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.sourcesay.ss-widget .ss-widget__table td {
-	font-variant-numeric: tabular-nums;
-}
-
-.sourcesay.ss-widget .ss-widget__table th .ss-swatch {
-	display: inline-block;
-	margin-right: 4px;
-	vertical-align: -1px;
-}
-
 /* ---------- Motion ---------- */
 @keyframes ss-chart-grow-x {
 
@@ -434,8 +402,7 @@
 	.ss-dual__fill,
 	.ss-chart__bar,
 	.ss-chart__peak,
-	.ss-answer__bar,
-	.sourcesay.ss-widget .ss-widget__fill {
+	.ss-answer__bar {
 		animation: none;
 		transition: none;
 	}
@@ -446,8 +413,7 @@
 
 	.ss-share__seg,
 	.ss-swatch,
-	.ss-dual__fill,
-	.sourcesay.ss-widget .ss-widget__fill {
+	.ss-dual__fill {
 		background: CanvasText;
 		forced-color-adjust: none;
 	}
@@ -457,8 +423,7 @@
 		background: Highlight;
 	}
 
-	.ss-dual__track,
-	.sourcesay.ss-widget .ss-widget__track {
+	.ss-dual__track {
 		border: 1px solid CanvasText;
 	}
 

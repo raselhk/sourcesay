@@ -1082,7 +1082,7 @@
 				el( 'span', { class: 'ss-brand__mark' }, cfg.logo ? el( 'img', { src: cfg.logo, alt: '', width: 26, height: 26 } ) : ico( 'responses' ) ),
 				el( 'span', { class: 'ss-brand__text' },
 					el( 'span', { class: 'ss-brand__name', text: 'SourceSay' } ),
-					el( 'span', { class: 'ss-brand__by', text: __( 'by SwiftWebDev', 'sourcesay' ) } )
+					el( 'span', { class: 'ss-brand__by', text: __( 'By SwiftWebDev', 'sourcesay' ) } )
 				)
 			),
 			nav
@@ -1647,7 +1647,7 @@
 					el( 'span', { class: 'ss-kpi__icon' }, ico( icon ) )
 				),
 				value,
-				el( 'span', { class: 'ss-kpi__change' }, change, change ? el( 'span', { class: 'ss-kpi__vs', text: change.dataset.new ? __( 'no earlier data', 'sourcesay' ) : __( 'vs previous period', 'sourcesay' ) } ) : null ),
+				el( 'span', { class: 'ss-kpi__change' }, change, change ? el( 'span', { class: 'ss-kpi__vs', text: change.dataset.new ? __( 'No earlier data', 'sourcesay' ) : __( 'vs previous period', 'sourcesay' ) } ) : null ),
 				el( 'span', { class: 'ss-kpi__meta' }, meta )
 			);
 		};
@@ -2462,7 +2462,7 @@
 			[ 'sourcesay_response_data', __( 'Filter', 'sourcesay' ), '$data, $order', __( 'Change the row before it is saved.', 'sourcesay' ) ],
 			[ 'sourcesay_response_saved', __( 'Action', 'sourcesay' ), '$id, $data, $order', __( 'Send each new answer to a CRM, Slack or analytics. Also fires for skips: check that $data[\'answer_id\'] is not "__skip".', 'sourcesay' ) ],
 			[ 'sourcesay_order_total_base', __( 'Filter', 'sourcesay' ), '$base, $order', __( 'Convert an order total to your main store currency when your currency plugin is not detected (Aelia, WooPayments, CURCY and WPML are built in).', 'sourcesay' ) ],
-			[ 'sourcesay_loaded', __( 'Action', 'sourcesay' ), __( 'none', 'sourcesay' ), __( 'Start your add-on. Runs early on plugins_loaded, once every SourceSay function exists.', 'sourcesay' ) ],
+			[ 'sourcesay_loaded', __( 'Action', 'sourcesay' ), __( 'None', 'sourcesay' ), __( 'Start your add-on. Runs early on plugins_loaded, once every SourceSay function exists.', 'sourcesay' ) ],
 			[ 'sourcesay_settings_schema', __( 'Filter', 'sourcesay' ), '$schema', __( 'Add your own settings: key => array( \'default\' => value, \'sanitize\' => callback ). They are saved with the survey settings and returned by GET /admin/settings. Without a sanitize callback the default is always saved.', 'sourcesay' ) ],
 			[ 'sourcesay_survey_steps', __( 'Filter', 'sourcesay' ), '$steps, $order, $settings, $context', __( 'Add more questions after the first one. The list reaches the survey script as config.steps; show them with the sourcesay.survey.next JavaScript hook.', 'sourcesay' ) ],
 			[ 'sourcesay_report_data', __( 'Filter', 'sourcesay' ), '$report, $range', __( 'Add your own sections to the report data. Cached for 5 minutes together with the report.', 'sourcesay' ) ],
@@ -2497,11 +2497,11 @@
 			[ 'key, order_key, wcf-key', __( 'Order key', 'sourcesay' ), __( 'URL parameters checked for the order key. It must match the order, otherwise nothing is shown.', 'sourcesay' ) ],
 		] );
 		const keys = table( [ __( 'Key', 'sourcesay' ), __( 'Values', 'sourcesay' ), __( 'Meaning', 'sourcesay' ) ], [
-			[ 'placement', '"auto" | "manual"', __( 'auto: shown on the WooCommerce thank-you page. manual: only where the block or shortcode is placed. The survey renders once per page either way.', 'sourcesay' ) ],
-			[ 'audience', '"all" | "new"', __( 'new: skip customers who had an earlier paid order (same rule as “returning” in reports).', 'sourcesay' ) ],
+			[ 'placement', '"auto" | "manual"', __( 'With auto, the survey shows on the WooCommerce thank-you page. With manual, it shows only where the block or shortcode is placed. Either way it renders once per page.', 'sourcesay' ) ],
+			[ 'audience', '"all" | "new"', __( 'With new, customers who had an earlier paid order are skipped (same rule as “returning” in reports).', 'sourcesay' ) ],
 			[ 'allow_skip', 'true | false', __( 'Shows the skip button. A skip stores a row with answer_id "__skip" so the survey is not shown again.', 'sourcesay' ) ],
-			[ 'skip_label', __( 'text, max 40', 'sourcesay' ), __( 'Skip button text. Stored as the answer label of skip rows.', 'sourcesay' ) ],
-			[ '__skip', __( 'answer_id value', 'sourcesay' ), __( 'Never counted as an answer. Reports show it as totals.skipped and totals.skip_rate; the CSV shows “Skipped”; the orders filter has a “Skipped” option.', 'sourcesay' ) ],
+			[ 'skip_label', __( 'Text, max 40', 'sourcesay' ), __( 'Skip button text. Stored as the answer label of skip rows.', 'sourcesay' ) ],
+			[ '__skip', __( 'Value of answer_id', 'sourcesay' ), __( 'Never counted as an answer. Reports show it as totals.skipped and totals.skip_rate; the CSV shows “Skipped”; the orders filter has a “Skipped” option.', 'sourcesay' ) ],
 		] );
 		const settingsEx = "// Read the survey settings in your own code.\n$settings = sourcesay_get_settings();\nif ( 'manual' === $settings['placement'] ) {\n\t// Only shown where [sourcesay] or the block is placed.\n}";
 		const curl = "curl -X POST '" + base + "/response' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"order_id\":123,\"order_key\":\"wc_order_abc123\",\"answer_id\":\"instagram\"}'";
@@ -3347,12 +3347,12 @@
 			class: 'ss-opt__iconbtn' + ( o.icon ? '' : ' is-empty' ),
 			'aria-haspopup': 'dialog',
 			'aria-expanded': 'false',
-			'aria-label': sprintf( /* translators: 1: icon name, 2: answer label */ __( 'Icon: %1$s. Change the icon for %2$s', 'sourcesay' ), o.icon ? ( ICON_LABELS[ o.icon ] || o.icon ) : __( 'none', 'sourcesay' ), name() ),
+			'aria-label': sprintf( /* translators: 1: icon name, 2: answer label */ __( 'Icon: %1$s. Change the icon for %2$s', 'sourcesay' ), o.icon ? ( ICON_LABELS[ o.icon ] || o.icon ) : __( 'None', 'sourcesay' ), name() ),
 			on: { click: () => openIconPicker( iconBtn, o ) },
 		}, o.icon ? ico( o.icon ) : ico( 'plus' ) );
 
 		const fuBox = el( 'div', { class: 'ss-opt__fu', hidden: ! ( o.followup && o.followup.enabled ) },
-			textField( { label: __( 'Follow-up question', 'sourcesay' ), value: o.followup.question, max: 120, errKey: 'fu:' + o._k, placeholder: __( 'e.g. Which podcast?', 'sourcesay' ), onInput: ( v ) => {
+			textField( { label: __( 'Follow-up question', 'sourcesay' ), value: o.followup.question, max: 120, errKey: 'fu:' + o._k, placeholder: __( 'For example: Which podcast?', 'sourcesay' ), onInput: ( v ) => {
 				o.followup.question = v;
 				changed();
 			} } ),
@@ -3475,7 +3475,7 @@
 			trigger.textContent = '';
 			trigger.appendChild( ico( key || 'plus' ) );
 			trigger.classList.toggle( 'is-empty', ! key );
-			trigger.setAttribute( 'aria-label', sprintf( /* translators: 1: icon name, 2: answer label */ __( 'Icon: %1$s. Change the icon for %2$s', 'sourcesay' ), key ? ( ICON_LABELS[ key ] || key ) : __( 'none', 'sourcesay' ), o.label || __( 'this answer', 'sourcesay' ) ) );
+			trigger.setAttribute( 'aria-label', sprintf( /* translators: 1: icon name, 2: answer label */ __( 'Icon: %1$s. Change the icon for %2$s', 'sourcesay' ), key ? ( ICON_LABELS[ key ] || key ) : __( 'None', 'sourcesay' ), o.label || __( 'this answer', 'sourcesay' ) ) );
 			closePopover( true );
 			changed();
 		};

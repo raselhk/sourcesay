@@ -73,7 +73,7 @@ Yes. Set Audience to "New customers only". Customers who already had a paid orde
 
 = Where is the dashboard widget? =
 
-On the WordPress Dashboard for users who can manage WooCommerce: top five channels, answers, revenue and response rate for the last 30 days.
+On the WordPress Dashboard for users who can manage WooCommerce. It shows the last 30 days: response rate and revenue from answered orders with the change from the 30 days before, where answers come from, and your top five channels by revenue.
 
 = Do I see the answer in order emails? =
 
@@ -106,6 +106,17 @@ Use the Export CSV button on the Reports tab.
 = What happens when I uninstall? =
 
 Nothing is deleted unless you turn on "Delete all data on uninstall" in Settings.
+
+== Screenshots ==
+
+1. Reports: See at a glance how many customers answered, your response rate and which channels bring the most revenue.
+2. Reports: Compare every channel's share of answers with its share of revenue, and follow answers day by day.
+3. What your customer sees: The question on the order confirmation page, with an optional follow-up like "Which podcast?".
+4. Survey: Edit the question and answers, and watch the live preview update as you type.
+5. First-run setup: Check your question and answers in a quick guided step before turning the survey on.
+6. WooCommerce Orders list: Every order shows what the customer said and the source WooCommerce tracked, with brand logos.
+7. Dashboard widget: Response rate and revenue with the change from the previous 30 days, where answers come from, and your top five channels with their logos.
+8. Settings: Ask again in My Account, choose how long answers are kept, and see exactly what is stored.
 
 == Privacy ==
 

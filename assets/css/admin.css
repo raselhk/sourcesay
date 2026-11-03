@@ -1792,8 +1792,6 @@ body:has(.ss-app) #wpfooter {
 	color: var(--ss-text-2);
 	font-size: var(--ss-fs-help);
 	font-weight: var(--ss-fw-bold);
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
 }
 
 .ss-icon-grid {
