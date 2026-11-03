@@ -27,7 +27,7 @@ define( 'SOURCESAY_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SOURCESAY_URL', plugin_dir_url( __FILE__ ) );
 define( 'SOURCESAY_DB_VERSION', 2 );
 
-foreach ( array( 'install', 'settings', 'responses', 'frontend', 'rest', 'reports', 'export', 'admin', 'orders-ui', 'privacy', 'cron', 'shortcode', 'dashboard-widget', 'customer', 'multilingual', 'currency' ) as $sourcesay_file ) {
+foreach ( array( 'install', 'settings', 'responses', 'frontend', 'rest', 'reports', 'export', 'admin', 'brands', 'orders-ui', 'privacy', 'cron', 'shortcode', 'dashboard-widget', 'customer', 'multilingual', 'currency' ) as $sourcesay_file ) {
 	require_once SOURCESAY_PATH . 'includes/' . $sourcesay_file . '.php';
 }
 unset( $sourcesay_file );

@@ -37,12 +37,97 @@ function sourcesay_orders_cell( $column, $order ) {
 		echo '<span aria-hidden="true">&ndash;</span>';
 		return;
 	}
-	echo esc_html( $row['answer_label'] );
+	echo '<span class="ss-chip">' . sourcesay_answer_logo( $row ) . '<span>' . esc_html( $row['answer_label'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- logo markup is escaped in sourcesay_logo_html().
 	if ( '' !== (string) $row['followup_text'] ) {
-		echo '<br><small>' . esc_html( $row['followup_text'] ) . '</small>';
+		echo '<small>' . esc_html( $row['followup_text'] ) . '</small>';
 	}
+	echo '</span></span>';
 }
 add_action( 'manage_woocommerce_page_wc-orders_custom_column', 'sourcesay_orders_cell', 10, 2 );
+
+/**
+ * Logo for a saved answer: the answer's icon as a brand mark when it is a brand, else the outline icon.
+ *
+ * @param array $row Response row.
+ * @return string Safe HTML.
+ */
+function sourcesay_answer_logo( $row ) {
+	static $settings = null;
+	if ( null === $settings ) {
+		$settings = sourcesay_get_settings();
+	}
+	if ( 'other' === $row['answer_id'] ) {
+		return sourcesay_logo_html( '', 'question' );
+	}
+	$opt   = sourcesay_find_option( $row['answer_id'], $settings );
+	$icon  = $opt && '' !== $opt['icon'] ? $opt['icon'] : 'tag';
+	$brand = sourcesay_brand_key( $icon );
+	return sourcesay_logo_html( '' !== $brand ? $brand : sourcesay_brand_key( $row['answer_label'] ), $icon );
+}
+
+/**
+ * WooCommerce's Origin column prints "Source: Facebook" as plain text with no filter, so SourceSay shows its own
+ * Origin column in the same place: the source's logo and name. Filter sourcesay_replace_origin_column to keep WooCommerce's.
+ *
+ * @param array $columns Columns.
+ * @return array
+ */
+function sourcesay_origin_column( $columns ) {
+	if ( ! isset( $columns['origin'] ) || ! apply_filters( 'sourcesay_replace_origin_column', true ) ) {
+		return $columns;
+	}
+	$out = array();
+	foreach ( $columns as $key => $label ) {
+		$out[ 'origin' === $key ? 'sourcesay_origin' : $key ] = $label;
+	}
+	return $out;
+}
+add_filter( 'manage_woocommerce_page_wc-orders_columns', 'sourcesay_origin_column', 20 );
+add_filter( 'manage_edit-shop_order_columns', 'sourcesay_origin_column', 20 );
+
+/**
+ * Logo + name for what WooCommerce Order Attribution tracked.
+ *
+ * @param WC_Order $order Order.
+ * @return string Safe HTML.
+ */
+function sourcesay_origin_html( $order ) {
+	$type   = (string) $order->get_meta( '_wc_order_attribution_source_type' );
+	$source = (string) $order->get_meta( '_wc_order_attribution_utm_source' );
+	$labels = sourcesay_wc_source_labels();
+	if ( '' === $type && '' === $source ) {
+		return '<span class="ss-chip ss-chip--muted">' . esc_html( $labels['unknown'] ) . '</span>';
+	}
+	$kind = isset( $labels[ $type ] ) ? $labels[ $type ] : $type;
+	if ( in_array( $type, array( 'typein', 'admin', 'pos', 'mobile_app' ), true ) || '' === $source || '(direct)' === $source ) {
+		$icons = array( 'typein' => 'globe', 'admin' => 'gear', 'pos' => 'storefront', 'mobile_app' => 'phone' );
+		$name  = '' !== $kind ? $kind : $source;
+		return '<span class="ss-chip">' . sourcesay_logo_html( '', isset( $icons[ $type ] ) ? $icons[ $type ] : 'globe' ) . '<span>' . esc_html( $name ) . '</span></span>';
+	}
+	$brand = sourcesay_brand_key( $source );
+	$fall  = 'organic' === $type ? 'globe' : ( 'referral' === $type ? 'referral' : 'megaphone' );
+	return '<span class="ss-chip" title="' . esc_attr( $kind ) . '">' . sourcesay_logo_html( $brand, $fall ) . '<span>' . esc_html( sourcesay_source_name( $brand, $source ) )
+		. '<span class="screen-reader-text"> (' . esc_html( $kind ) . ')</span></span></span>';
+}
+
+/**
+ * Render the Origin cell.
+ *
+ * @param string       $column Column key.
+ * @param WC_Order|int $order  Order object (HPOS) or post id (legacy).
+ * @return void
+ */
+function sourcesay_origin_cell( $column, $order ) {
+	if ( 'sourcesay_origin' !== $column ) {
+		return;
+	}
+	$order = $order instanceof WC_Order ? $order : wc_get_order( (int) $order );
+	if ( $order ) {
+		echo sourcesay_origin_html( $order ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts.
+	}
+}
+add_action( 'manage_woocommerce_page_wc-orders_custom_column', 'sourcesay_origin_cell', 10, 2 );
+add_action( 'manage_shop_order_posts_custom_column', 'sourcesay_origin_cell', 10, 2 );
 add_action( 'manage_shop_order_posts_custom_column', 'sourcesay_orders_cell', 10, 2 );
 
 /**
@@ -143,7 +228,7 @@ function sourcesay_meta_box( $post_or_order ) {
 	}
 	$row = sourcesay_get_response( $order->get_id() );
 	if ( $row ) {
-		echo '<p><strong>' . esc_html( $row['answer_label'] ) . '</strong></p>';
+		echo '<p class="ss-chip">' . sourcesay_answer_logo( $row ) . '<strong>' . esc_html( $row['answer_label'] ) . '</strong></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- logo markup is escaped in sourcesay_logo_html().
 		if ( '' !== (string) $row['followup_text'] ) {
 			echo '<p>' . esc_html( $row['followup_text'] ) . '</p>';
 		}
@@ -153,12 +238,7 @@ function sourcesay_meta_box( $post_or_order ) {
 	} else {
 		echo '<p>' . esc_html__( 'The customer has not answered yet.', 'sourcesay' ) . '</p>';
 	}
-	$type   = (string) $order->get_meta( '_wc_order_attribution_source_type' );
-	$source = (string) $order->get_meta( '_wc_order_attribution_utm_source' );
-	$labels = sourcesay_wc_source_labels();
-	if ( '' !== $type || '' !== $source ) {
-		$text = trim( ( isset( $labels[ $type ] ) ? $labels[ $type ] : $type ) . ( '' !== $source ? ' / ' . $source : '' ) );
-		/* translators: %s: WooCommerce tracked source, e.g. "Campaign (UTM) / instagram". */
-		echo '<p class="description">' . esc_html( sprintf( __( 'WooCommerce tracked: %s', 'sourcesay' ), $text ) ) . '</p>';
+	if ( '' !== (string) $order->get_meta( '_wc_order_attribution_source_type' ) || '' !== (string) $order->get_meta( '_wc_order_attribution_utm_source' ) ) {
+		echo '<p class="description">' . esc_html__( 'WooCommerce tracked:', 'sourcesay' ) . '</p><p>' . sourcesay_origin_html( $order ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts.
 	}
 }
