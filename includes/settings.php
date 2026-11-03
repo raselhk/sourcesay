@@ -126,7 +126,7 @@ function sourcesay_default_options() {
  * @return array
  */
 function sourcesay_default_settings() {
-	return array(
+	$defaults = array(
 		// Off until the store owner turns it on (setup step 3 or the Survey tab); test orders still show it.
 		'enabled'             => false,
 		'question'            => __( 'How did you hear about us?', 'sourcesay' ),
@@ -149,6 +149,29 @@ function sourcesay_default_settings() {
 		'allow_skip'          => true,
 		'skip_label'          => __( 'Prefer not to say', 'sourcesay' ),
 	);
+	foreach ( sourcesay_settings_schema() as $key => $def ) {
+		if ( ! array_key_exists( $key, $defaults ) ) {
+			$defaults[ $key ] = $def['default'];
+		}
+	}
+	return $defaults;
+}
+
+/**
+ * Extra settings keys added by extensions through the sourcesay_settings_schema filter.
+ * Each entry: key => array( 'default' => mixed, 'sanitize' => callable( $value, $raw ) ).
+ * Core keys cannot be replaced, and a key without a callable sanitizer always saves its default.
+ *
+ * @return array
+ */
+function sourcesay_settings_schema() {
+	$schema = array();
+	foreach ( (array) apply_filters( 'sourcesay_settings_schema', array() ) as $key => $def ) {
+		if ( is_string( $key ) && sanitize_key( $key ) === $key && is_array( $def ) && array_key_exists( 'default', $def ) ) {
+			$schema[ $key ] = $def;
+		}
+	}
+	return $schema;
 }
 
 /**
@@ -296,6 +319,12 @@ function sourcesay_sanitize_settings( $raw ) {
 	$clean['allow_skip']          = $bool( $raw['allow_skip'] );
 	$skip_label                   = $text( $raw['skip_label'], 40 );
 	$clean['skip_label']          = '' === $skip_label ? $defaults['skip_label'] : $skip_label;
+
+	foreach ( sourcesay_settings_schema() as $key => $def ) {
+		if ( ! array_key_exists( $key, $clean ) ) {
+			$clean[ $key ] = isset( $def['sanitize'] ) && is_callable( $def['sanitize'] ) ? call_user_func( $def['sanitize'], $raw[ $key ], $raw ) : $def['default'];
+		}
+	}
 
 	return $clean;
 }

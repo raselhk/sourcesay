@@ -1,6 +1,6 @@
 /**
  * SourceSay admin app: Reports, Survey builder, Settings.
- * Vanilla JS, no build step. Uses wp.apiFetch (REST nonce) and wp.i18n.
+ * Vanilla JS, no build step. Uses wp.apiFetch (REST nonce), wp.i18n and wp.hooks (extension points, listed in the For developers panel).
  */
 ( function () {
 	'use strict';
@@ -147,11 +147,13 @@
 		b2b: __( 'B2B and services', 'sourcesay' ),
 		local: __( 'Local business', 'sourcesay' ),
 	};
-	const TABS = [
+	// Extensions add tabs through the sourcesay.tabs filter when the app boots (see boot()).
+	let TABS = [
 		{ id: 'reports', label: __( 'Reports', 'sourcesay' ), icon: 'chart' },
 		{ id: 'survey', label: __( 'Survey', 'sourcesay' ), icon: 'list' },
 		{ id: 'settings', label: __( 'Settings', 'sourcesay' ), icon: 'gear' },
 	];
+	const DRAFT_TABS = [ 'survey', 'settings' ]; // Tabs that edit the shared settings draft.
 
 	/* ------------------------------------------------------------------ */
 	/* State                                                              */
@@ -940,33 +942,39 @@
 	/* ------------------------------------------------------------------ */
 	/* Shell + routing                                                    */
 	/* ------------------------------------------------------------------ */
-	const nav = el( 'nav', { class: 'ss-tabs', 'aria-label': __( 'SourceSay sections', 'sourcesay' ) },
-		TABS.map( ( t ) => el( 'a', {
-			class: 'ss-tab',
-			href: '#' + t.id,
-			'data-tab': t.id,
-			on: { click: ( e ) => {
-				if ( needsLeaveWarning( t.id ) ) {
-					e.preventDefault();
-					askLeave( t.id );
-				}
-			} },
-		}, ico( t.icon ), t.label ) )
-	);
-	const header = el( 'header', { class: 'ss-header' },
-		el( 'div', { class: 'ss-brand' },
-			el( 'span', { class: 'ss-brand__mark' }, ico( 'responses' ) ),
-			el( 'span', { class: 'ss-brand__text' },
-				el( 'span', { class: 'ss-brand__name', text: 'SourceSay' } ),
-				el( 'span', { class: 'ss-brand__by', text: __( 'by SwiftWebDev', 'sourcesay' ) } )
-			)
-		),
-		nav
-	);
+	let nav = null;
 	const main = el( 'div', { class: 'ss-content', id: 'ss-main' } );
 
-	mount.textContent = '';
-	add( mount, [ header, main, toastBox, live ] );
+	/** Build the header and tab bar. Runs once, after every extension script has registered its hooks. */
+	function buildShell() {
+		const tabs = applyHook( 'sourcesay.tabs', TABS, { ui: UI } ).filter( ( t ) => t && t.id && t.label );
+		TABS = tabs.length ? tabs : TABS;
+		nav = el( 'nav', { class: 'ss-tabs', 'aria-label': __( 'SourceSay sections', 'sourcesay' ) },
+			TABS.map( ( t ) => el( 'a', {
+				class: 'ss-tab',
+				href: '#' + t.id,
+				'data-tab': t.id,
+				on: { click: ( e ) => {
+					if ( needsLeaveWarning( t.id ) ) {
+						e.preventDefault();
+						askLeave( t.id );
+					}
+				} },
+			}, ico( t.icon || 'gear' ), t.label ) )
+		);
+		const header = el( 'header', { class: 'ss-header' },
+			el( 'div', { class: 'ss-brand' },
+				el( 'span', { class: 'ss-brand__mark' }, ico( 'responses' ) ),
+				el( 'span', { class: 'ss-brand__text' },
+					el( 'span', { class: 'ss-brand__name', text: 'SourceSay' } ),
+					el( 'span', { class: 'ss-brand__by', text: __( 'by SwiftWebDev', 'sourcesay' ) } )
+				)
+			),
+			nav
+		);
+		mount.textContent = '';
+		add( mount, [ header, main, toastBox, live ] );
+	}
 
 	if ( SURVEY_CSS && ! document.getElementById( 'sourcesay-survey-css' ) ) {
 		document.head.appendChild( el( 'link', { rel: 'stylesheet', id: 'sourcesay-survey-css', href: SURVEY_CSS } ) );
@@ -978,7 +986,7 @@
 	}
 
 	function needsLeaveWarning( next ) {
-		return S.tab !== 'reports' && next === 'reports' && isDirty() && ! S.allowNav;
+		return DRAFT_TABS.includes( S.tab ) && ! DRAFT_TABS.includes( next ) && isDirty() && ! S.allowNav;
 	}
 
 	function askLeave( next ) {
@@ -1054,8 +1062,13 @@
 			renderReports( wrap );
 		} else if ( S.tab === 'survey' ) {
 			renderSurvey( wrap );
-		} else {
+		} else if ( S.tab === 'settings' ) {
 			renderSettings( wrap );
+		} else {
+			const ext = TABS.find( ( t ) => t.id === S.tab );
+			if ( ext && typeof ext.render === 'function' ) {
+				ext.render( wrap, { ui: UI } );
+			}
 		}
 		if ( focus ) {
 			const h1 = main.querySelector( 'h1' );
@@ -1226,13 +1239,16 @@
 			const code = ( rep.currency && rep.currency.code ) || '';
 			body.appendChild( el( 'p', { class: 'ss-note' }, ico( 'info' ), el( 'span', { text: sprintf( /* translators: %s: store base currency code, e.g. USD */ __( 'Revenue is converted to %s, your store’s main currency, so orders paid in other currencies add up correctly.', 'sourcesay' ), code ) } ) ) );
 		}
-		body.appendChild( channelsCard( rep ) );
-		body.appendChild( el( 'div', { class: 'ss-grid' },
-			el( 'div', { class: 'ss-span-8' }, trendCard( rep ) ),
-			el( 'div', { class: 'ss-span-4' }, nvrCard( rep ) )
-		) );
-		body.appendChild( toldCard( rep ) );
-		body.appendChild( el( 'section', { class: 'ss-card' }, howToRead() ) );
+		const cards = [
+			channelsCard( rep ),
+			el( 'div', { class: 'ss-grid' },
+				el( 'div', { class: 'ss-span-8' }, trendCard( rep ) ),
+				el( 'div', { class: 'ss-span-4' }, nvrCard( rep ) )
+			),
+			toldCard( rep ),
+			el( 'section', { class: 'ss-card' }, howToRead() ),
+		];
+		add( body, applyHook( 'sourcesay.reports.cards', cards, { report: rep, range: S.range, ui: UI } ) );
 		const promo = proCard();
 		if ( promo ) {
 			body.appendChild( promo );
@@ -2198,7 +2214,23 @@
 			[ 'sourcesay_response_data', __( 'Filter', 'sourcesay' ), '$data, $order', __( 'Change the row before it is saved.', 'sourcesay' ) ],
 			[ 'sourcesay_response_saved', __( 'Action', 'sourcesay' ), '$id, $data, $order', __( 'Send each new answer to a CRM, Slack or analytics. Also fires for skips: check that $data[\'answer_id\'] is not "__skip".', 'sourcesay' ) ],
 			[ 'sourcesay_order_total_base', __( 'Filter', 'sourcesay' ), '$base, $order', __( 'Convert an order total to your main store currency when your currency plugin is not detected (Aelia, WooPayments, CURCY and WPML are built in).', 'sourcesay' ) ],
+			[ 'sourcesay_loaded', __( 'Action', 'sourcesay' ), __( 'none', 'sourcesay' ), __( 'Start your add-on. Runs early on plugins_loaded, once every SourceSay function exists.', 'sourcesay' ) ],
+			[ 'sourcesay_settings_schema', __( 'Filter', 'sourcesay' ), '$schema', __( 'Add your own settings: key => array( \'default\' => value, \'sanitize\' => callback ). They are saved with the survey settings and returned by GET /admin/settings. Without a sanitize callback the default is always saved.', 'sourcesay' ) ],
+			[ 'sourcesay_survey_steps', __( 'Filter', 'sourcesay' ), '$steps, $order, $settings, $context', __( 'Add more questions after the first one. The list reaches the survey script as config.steps; show them with the sourcesay.survey.next JavaScript hook.', 'sourcesay' ) ],
+			[ 'sourcesay_report_data', __( 'Filter', 'sourcesay' ), '$report, $range', __( 'Add your own sections to the report data. Cached for 5 minutes together with the report.', 'sourcesay' ) ],
+			[ 'sourcesay_status', __( 'Filter', 'sourcesay' ), '$status', __( 'Add your own checks to the status card: append { code, message } to $status[\'problems\'], and set survey_live to false if the problem stops the survey.', 'sourcesay' ) ],
+			[ 'sourcesay_csv_columns', __( 'Filter', 'sourcesay' ), '$columns', __( 'Add, remove or reorder CSV columns. The list is also the header row.', 'sourcesay' ) ],
+			[ 'sourcesay_csv_row', __( 'Filter', 'sourcesay' ), '$row, $response, $order', __( 'Fill your own columns. $row is keyed by column name; $order is false when the order was deleted.', 'sourcesay' ) ],
 		] );
+		const jsHooks = table( [ __( 'JavaScript hook', 'sourcesay' ), __( 'Where', 'sourcesay' ), __( 'Arguments', 'sourcesay' ), __( 'Use it to', 'sourcesay' ) ], [
+			[ 'sourcesay.tabs', __( 'This screen', 'sourcesay' ), 'tabs, { ui }', __( 'Add a tab: { id, label, icon, render( wrap, { ui } ) }.', 'sourcesay' ) ],
+			[ 'sourcesay.reports.cards', __( 'Reports', 'sourcesay' ), 'cards, { report, range, ui }', __( 'Add cards below the channel table. Only shown when there are answers.', 'sourcesay' ) ],
+			[ 'sourcesay.survey.cards', __( 'Survey', 'sourcesay' ), 'cards, { draft, changed, ui }', __( 'Add cards to the survey builder. Change your keys in draft, then call changed() so the Save bar turns on.', 'sourcesay' ) ],
+			[ 'sourcesay.settings.cards', __( 'Settings', 'sourcesay' ), 'cards, { draft, changed, ui }', __( 'Add cards to Settings. Same draft rules as the Survey tab.', 'sourcesay' ) ],
+			[ 'sourcesay.developer.items', __( 'This panel', 'sourcesay' ), 'items, { ui, restBase }', __( 'Add your own developer notes at the end of this panel.', 'sourcesay' ) ],
+			[ 'sourcesay.survey.next', __( 'Thank-you page', 'sourcesay' ), 'null, { root, config, steps, answer, message, done }', __( 'Return an element to show the next question in the same card instead of the thank-you. Call done( message ) after the last one.', 'sourcesay' ) ],
+		] );
+		const jsEx = "// Load your script on WooCommerce > SourceSay with the 'wp-hooks' dependency.\nwp.hooks.addFilter( 'sourcesay.reports.cards', 'my-plugin', function ( cards, ctx ) {\n\tcards.push( ctx.ui.card( { title: 'My numbers' }, ctx.ui.el( 'p', { text: 'Hello' } ) ) );\n\treturn cards;\n} );";
 		const ex1 = "// Do not ask customers who paid by bank transfer.\nadd_filter( 'sourcesay_should_display', function ( $show, $order, $context ) {\n\tif ( 'bacs' === $order->get_payment_method() ) {\n\t\treturn false;\n\t}\n\treturn $show;\n}, 10, 3 );";
 		const ex2 = "// Add the answer to the order notes.\nadd_action( 'sourcesay_response_saved', function ( $id, $data, $order ) {\n\t$order->add_order_note( 'Heard about us: ' . $data['answer_label'] );\n}, 10, 3 );";
 		const ex3 = "// Keep follow-up text short.\nadd_filter( 'sourcesay_response_data', function ( $data, $order ) {\n\t$data['followup_text'] = mb_substr( (string) $data['followup_text'], 0, 120 );\n\treturn $data;\n}, 10, 2 );";
@@ -2235,7 +2267,7 @@
 			[ 'order_total', __( 'Order total minus refunds', 'sourcesay' ) ],
 			[ 'currency', __( 'Order currency code', 'sourcesay' ) ],
 			[ 'status', __( 'Order status', 'sourcesay' ) ],
-			[ 'returning', __( '1 if the customer had paid for an earlier order', 'sourcesay' ) ],
+			[ 'returning', __( '“yes” if the customer had paid for an earlier order, otherwise “no”', 'sourcesay' ) ],
 			[ 'woocommerce_source_type', __( 'Source type from WooCommerce order attribution', 'sourcesay' ) ],
 			[ 'woocommerce_source', __( 'Source (utm_source or referrer) from WooCommerce order attribution', 'sourcesay' ) ],
 		] );
@@ -2246,6 +2278,10 @@
 			codeBlock( ex1, 'sourcesay_should_display' ),
 			codeBlock( ex2, 'sourcesay_response_saved' ),
 			codeBlock( ex3, 'sourcesay_response_data' ),
+			el( 'h3', { class: 'ss-card__sub', text: __( 'JavaScript hooks', 'sourcesay' ) } ),
+			el( 'p', { class: 'ss-field__help', text: __( 'Filters on wp.hooks. ui holds this screen’s building blocks (el, card, toggle, textField, toast and more), so your cards match the rest of SourceSay.', 'sourcesay' ) } ),
+			jsHooks,
+			codeBlock( jsEx, 'sourcesay.reports.cards' ),
 			el( 'h3', { class: 'ss-card__sub', text: __( 'Block and shortcode', 'sourcesay' ) } ),
 			embed,
 			el( 'h3', { class: 'ss-card__sub', text: __( 'Settings keys', 'sourcesay' ) } ),
@@ -2259,6 +2295,7 @@
 			el( 'h3', { class: 'ss-card__sub', text: __( 'CSV export columns', 'sourcesay' ) } ),
 			el( 'p', { class: 'ss-field__help', text: __( 'Export from Reports. Test orders are left out, and cells that start with = + - @ are escaped so spreadsheets do not run them as formulas.', 'sourcesay' ) } ),
 			csv,
+			applyHook( 'sourcesay.developer.items', [], { ui: UI, restBase: base } ),
 		] ) );
 	}
 
@@ -2475,7 +2512,7 @@
 	/* ------------------------------------------------------------------ */
 	function loadSettings() {
 		S.settingsState = 'loading';
-		if ( S.tab !== 'reports' ) {
+		if ( DRAFT_TABS.includes( S.tab ) ) {
 			render();
 		}
 		api( '/admin/settings' ).then( ( r ) => {
@@ -2486,11 +2523,13 @@
 			S.draft = withKeys( r.settings );
 			S.accentCustom = !! r.settings.accent;
 			S.settingsState = 'ready';
-			render();
+			if ( DRAFT_TABS.includes( S.tab ) || S.tab === 'reports' ) {
+				render();
+			}
 		} ).catch( ( err ) => {
 			S.settingsState = 'error';
 			S.settingsErr = err;
-			if ( S.tab !== 'reports' ) {
+			if ( DRAFT_TABS.includes( S.tab ) ) {
 				render();
 			}
 		} );
@@ -2527,7 +2566,7 @@
 			S.showErrors = false;
 			S.touched.clear();
 			toast( 'success', __( 'Changes saved', 'sourcesay' ) );
-			if ( S.tab !== 'reports' ) {
+			if ( DRAFT_TABS.includes( S.tab ) ) {
 				render();
 				if ( R.barStatus ) {
 					R.barStatus.focus( { preventScroll: true } );
@@ -2781,7 +2820,7 @@
 		fillI18nNote();
 		wrap.appendChild( R.i18nNote );
 		wrap.appendChild( el( 'div', { class: 'ss-builder' },
-			el( 'div', { class: 'ss-stack' }, qCard, optsCard, otherCard, placementCard( d ), audienceCard( d ), lookCard ),
+			el( 'div', { class: 'ss-stack' }, applyHook( 'sourcesay.survey.cards', [ qCard, optsCard, otherCard, placementCard( d ), audienceCard( d ), lookCard ], { draft: d, changed, ui: UI } ) ),
 			el( 'div', { class: 'ss-builder__side' }, previewCard )
 		) );
 		wrap.appendChild( saveBar() );
@@ -3539,6 +3578,8 @@
 				)
 			)
 		);
+		const extra = applyHook( 'sourcesay.settings.cards', [], { draft: d, changed: () => changed( { preview: false } ), ui: UI } );
+		add( left, extra );
 		wrap.appendChild( el( 'div', { class: 'ss-settings' }, left, right ) );
 		wrap.appendChild( devPanel() );
 		wrap.appendChild( saveBar() );
@@ -3547,9 +3588,39 @@
 	/* ------------------------------------------------------------------ */
 	/* Boot                                                               */
 	/* ------------------------------------------------------------------ */
-	S.tab = tabFromHash();
-	render();
-	loadSettings();
-	loadStatus();
-	loadReport();
+	/* Helpers handed to extensions (SourceSay Pro) so their cards and tabs match this design system. */
+	const UI = {
+		el, ico, card, toast, textField, toggle, selectField, seg, tip, labelWithTip, details, codeBlock, copyText,
+		pageHead, errorCard, errText, uid, fmtNum, fmtMoney, fmtPct, fmtDay,
+		render: () => render(),
+	};
+
+	/** Run a wp.hooks filter that returns a list; a broken extension result falls back to the original list. */
+	function applyHook( name, list, ctx ) {
+		if ( ! wp.hooks ) {
+			return list;
+		}
+		try {
+			const out = wp.hooks.applyFilters( name, list, ctx );
+			return Array.isArray( out ) ? out : list;
+		} catch ( e ) {
+			window.console && window.console.error( e ); // eslint-disable-line no-console
+			return list;
+		}
+	}
+
+	function boot() {
+		buildShell();
+		S.tab = tabFromHash();
+		render();
+		loadSettings();
+		loadStatus();
+		loadReport();
+	}
+	// Extension scripts may print after this file, so wait until every script on the page has run.
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', boot );
+	} else {
+		boot();
+	}
 }() );

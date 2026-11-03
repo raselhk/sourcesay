@@ -156,7 +156,7 @@ function sourcesay_enqueue_survey_assets( $force = false ) {
 		wp_enqueue_style( 'sourcesay-survey', SOURCESAY_URL . 'assets/css/survey.css', array(), sourcesay_asset_version( 'assets/css/survey.css' ) );
 	}
 	if ( file_exists( SOURCESAY_PATH . 'assets/js/survey.js' ) ) {
-		wp_enqueue_script( 'sourcesay-survey', SOURCESAY_URL . 'assets/js/survey.js', array(), sourcesay_asset_version( 'assets/js/survey.js' ), true );
+		wp_enqueue_script( 'sourcesay-survey', SOURCESAY_URL . 'assets/js/survey.js', array( 'wp-hooks' ), sourcesay_asset_version( 'assets/js/survey.js' ), true );
 	}
 }
 add_action( 'wp_enqueue_scripts', 'sourcesay_enqueue_survey_assets', 10, 0 );

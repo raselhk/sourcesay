@@ -1,4 +1,4 @@
-/* SourceSay thank-you survey. Vanilla, no dependencies. Without JS the form posts to admin-post.php. */
+/* SourceSay thank-you survey. Vanilla JS; wp.hooks only for extensions. Without JS the form posts to admin-post.php. */
 ( function () {
 	'use strict';
 
@@ -26,6 +26,8 @@
 		var keyChoose = false;
 		var busy = false;
 		var lastSkip = false;
+		var lastBody = null;
+		var shown = form; // The node inside root that done() replaces.
 		var fuLabel = fu && fu.querySelector( 'label' );
 		var defaultFuLabel = fuLabel ? fuLabel.textContent : '';
 
@@ -131,8 +133,37 @@
 			}
 			root.setAttribute( 'aria-live', 'polite' );
 			p.tabIndex = -1;
-			root.replaceChild( p, form );
+			root.replaceChild( p, shown );
+			shown = p;
 			p.focus( { preventScroll: true } );
+		}
+
+		/*
+		 * Extensions (SourceSay Pro) can show a next question in the same card instead of the thank-you.
+		 * Filter 'sourcesay.survey.next': return an element to show, or null for the normal thank-you.
+		 * The extension calls ctx.done( message ) when its last step is answered.
+		 */
+		function showNext( message ) {
+			var hooks = window.wp && window.wp.hooks;
+			if ( ! hooks ) {
+				return false;
+			}
+			var node = hooks.applyFilters( 'sourcesay.survey.next', null, {
+				root: root,
+				config: cfg,
+				steps: cfg.steps || [],
+				answer: lastBody,
+				message: message,
+				done: done,
+			} );
+			if ( ! node || node.nodeType !== 1 ) {
+				return false;
+			}
+			root.classList.remove( 'is-busy', 'is-open' );
+			root.removeAttribute( 'aria-busy' );
+			root.replaceChild( node, shown );
+			shown = node;
+			return true;
 		}
 
 		// isSkip: the skip button was pressed. Sends answer_id "__skip" and no texts.
@@ -158,6 +189,7 @@
 			if ( radio && other && ! other.hidden && radio.hasAttribute( 'data-other' ) ) {
 				body.other_text = other.querySelector( 'input' ).value.trim();
 			}
+			lastBody = body;
 			fetch( cfg.rest, {
 				method: 'POST',
 				credentials: 'same-origin',
@@ -174,6 +206,9 @@
 				.then( function ( r ) {
 					// 409 = this order already has an answer: nothing more to ask.
 					if ( ( r.status === 200 && r.json.ok ) || r.status === 409 ) {
+						if ( r.status === 200 && ! lastSkip && showNext( r.json.message ) ) {
+							return;
+						}
 						if ( lastSkip && r.status === 200 ) {
 							done( t.skipped || 'No problem, thanks!', true );
 						} else {

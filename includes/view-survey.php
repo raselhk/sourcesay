@@ -95,16 +95,19 @@ function sourcesay_render_survey( WC_Order $order, array $settings, string $cont
 		);
 	}
 
-	$uid      = 'ss-' . $order_id . '-' . $context;
-	$question = '' !== ( $settings['question'] ?? '' ) ? (string) $settings['question'] : __( 'How did you hear about us?', 'sourcesay' );
-	$data     = array(
+	// Extra questions shown after this one (SourceSay Pro); survey.js hands them to the sourcesay.survey.next JS hook.
+	$steps      = array_values( (array) apply_filters( 'sourcesay_survey_steps', array(), $order, $settings, $context ) );
+	$uid        = 'ss-' . $order_id . '-' . $context;
+	$question   = '' !== ( $settings['question'] ?? '' ) ? (string) $settings['question'] : __( 'How did you hear about us?', 'sourcesay' );
+	$data       = array(
 		'rest'     => rest_url( 'sourcesay/v1/response' ),
 		'orderId'  => $order_id,
 		'orderKey' => $order->get_order_key(),
 		'context'  => $context,
 		'thankYou' => $thanks,
+		'steps'    => $steps,
 	);
-	$i18n     = array(
+	$i18n       = array(
 		'sending' => __( 'Sending your answer…', 'sourcesay' ),
 		'error'   => __( 'Your answer did not go through. Check your connection and try again.', 'sourcesay' ),
 		'limit'   => __( 'Too many tries in a short time. Please try again in a few minutes.', 'sourcesay' ),

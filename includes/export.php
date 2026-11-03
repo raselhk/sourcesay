@@ -34,28 +34,42 @@ function sourcesay_export_rows( $from, $to ) {
 	$table = sourcesay_table();
 	$items = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE is_test = 0 AND order_created BETWEEN %s AND %s ORDER BY order_created ASC', $table, $range['start'], $range['end'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 
-	$rows = array(
-		array( 'date', 'order_id', 'order_number', 'answer', 'follow_up', 'other', 'order_total', 'currency', 'status', 'returning', 'woocommerce_source_type', 'woocommerce_source' ),
-	);
+	/**
+	 * CSV columns, in order. Add a key here and fill it with the sourcesay_csv_row filter.
+	 *
+	 * @param string[] $columns Column keys (also the header row).
+	 */
+	$columns = array_values( (array) apply_filters( 'sourcesay_csv_columns', array( 'date', 'order_id', 'order_number', 'answer', 'follow_up', 'other', 'order_total', 'currency', 'status', 'returning', 'woocommerce_source_type', 'woocommerce_source' ) ) );
+	$rows    = array( array_map( 'sourcesay_csv_cell', $columns ) );
 	foreach ( $items as $r ) {
-		$order  = wc_get_order( (int) $r['order_id'] );
-		$rows[] = array_map(
-			'sourcesay_csv_cell',
-			array(
-				get_date_from_gmt( $r['order_created'], 'Y-m-d' ),
-				$r['order_id'],
-				$order ? $order->get_order_number() : $r['order_id'],
-				'__skip' === $r['answer_id'] ? __( 'Skipped', 'sourcesay' ) : $r['answer_label'],
-				$r['followup_text'],
-				$r['other_text'],
-				$r['order_total'],
-				$r['order_currency'],
-				$r['order_status'],
-				$r['is_returning'] ? 'yes' : 'no',
-				$r['wc_source_type'],
-				$r['wc_source'],
-			)
+		$order = wc_get_order( (int) $r['order_id'] );
+		$row   = array(
+			'date'                    => get_date_from_gmt( $r['order_created'], 'Y-m-d' ),
+			'order_id'                => $r['order_id'],
+			'order_number'            => $order ? $order->get_order_number() : $r['order_id'],
+			'answer'                  => '__skip' === $r['answer_id'] ? __( 'Skipped', 'sourcesay' ) : $r['answer_label'],
+			'follow_up'               => $r['followup_text'],
+			'other'                   => $r['other_text'],
+			'order_total'             => $r['order_total'],
+			'currency'                => $r['order_currency'],
+			'status'                  => $r['order_status'],
+			'returning'               => $r['is_returning'] ? 'yes' : 'no',
+			'woocommerce_source_type' => $r['wc_source_type'],
+			'woocommerce_source'      => $r['wc_source'],
 		);
+		/**
+		 * Values of one CSV row, keyed by column.
+		 *
+		 * @param array         $row      Column => value.
+		 * @param array         $response Response table row.
+		 * @param WC_Order|false $order   The order, or false when it was deleted.
+		 */
+		$row  = (array) apply_filters( 'sourcesay_csv_row', $row, $r, $order );
+		$line = array();
+		foreach ( $columns as $col ) {
+			$line[] = sourcesay_csv_cell( isset( $row[ $col ] ) && is_scalar( $row[ $col ] ) ? $row[ $col ] : '' );
+		}
+		$rows[] = $line;
 	}
 	return $rows;
 }

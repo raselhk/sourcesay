@@ -282,7 +282,7 @@ function sourcesay_get_status() {
 		)
 	);
 
-	return array(
+	$status = array(
 		'survey_live'        => empty( $problems ) || ! array_diff( wp_list_pluck( $problems, 'code' ), array( 'caching_plugin', 'custom_thankyou' ) ),
 		'problems'           => $problems,
 		'checkout_type'      => $checkout_type,
@@ -297,6 +297,13 @@ function sourcesay_get_status() {
 		'test_responses'     => $tresp,
 		'translation_plugin' => sourcesay_translation_plugin(),
 	);
+
+	/**
+	 * Extra checks: add problems ({code, message}) or fields. Set survey_live to false for a problem that stops the survey.
+	 *
+	 * @param array $status Status payload.
+	 */
+	return (array) apply_filters( 'sourcesay_status', $status );
 }
 
 /**

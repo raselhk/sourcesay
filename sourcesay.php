@@ -53,6 +53,16 @@ add_action(
 add_action( 'init', 'sourcesay_maybe_upgrade', 5 );
 
 /**
+ * Extensions such as SourceSay Pro start here: every SourceSay function exists by now.
+ *
+ * @return void
+ */
+function sourcesay_fire_loaded() {
+	do_action( 'sourcesay_loaded' );
+}
+add_action( 'plugins_loaded', 'sourcesay_fire_loaded', 5 );
+
+/**
  * Asset version: plugin version plus the file's modified time, so browsers never keep a stale copy.
  *
  * @param string $rel Path relative to the plugin folder.

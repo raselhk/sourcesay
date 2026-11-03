@@ -352,6 +352,14 @@ function sourcesay_get_report( $from = '', $to = '' ) {
 		'new_vs_returning' => $nvr,
 	);
 
+	/**
+	 * Extra report sections. The result is cached for 5 minutes with the report.
+	 *
+	 * @param array $report Report data.
+	 * @param array $range  Resolved range: from, to (Y-m-d), start, end (GMT).
+	 */
+	$report = (array) apply_filters( 'sourcesay_report_data', $report, $range );
+
 	set_transient( $ckey, $report, 5 * MINUTE_IN_SECONDS );
 	return $report;
 }

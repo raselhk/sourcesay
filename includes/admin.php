@@ -85,7 +85,7 @@ function sourcesay_admin_assets( $hook ) {
 	if ( ! file_exists( SOURCESAY_PATH . 'assets/js/admin.js' ) ) {
 		return;
 	}
-	wp_enqueue_script( 'sourcesay-admin', SOURCESAY_URL . 'assets/js/admin.js', array( 'wp-i18n', 'wp-api-fetch' ), sourcesay_asset_version( 'assets/js/admin.js' ), true );
+	wp_enqueue_script( 'sourcesay-admin', SOURCESAY_URL . 'assets/js/admin.js', array( 'wp-i18n', 'wp-api-fetch', 'wp-hooks' ), sourcesay_asset_version( 'assets/js/admin.js' ), true );
 	wp_set_script_translations( 'sourcesay-admin', 'sourcesay' );
 	wp_localize_script(
 		'sourcesay-admin',
