@@ -871,52 +871,121 @@ body:has(.ss-app) #wpfooter {
 	min-width: 0;
 }
 
-/* ---------- KPI tiles ---------- */
-.ss-kpi {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
-	gap: 2px var(--ss-space-4);
-	align-items: center;
-	padding: var(--ss-space-5) var(--ss-card-pad);
+/* ---------- KPI tiles (Swift Outbox tile: title + badge, number, change line, sub line) ---------- */
+.ss-app .ss-tiles {
+	--ss-tile-gap: var(--ss-space-5);
+	row-gap: 0;
+	margin-bottom: calc(-1 * var(--ss-tile-gap));
 }
 
-.ss-kpi__icon {
-	grid-row: span 3;
-	display: grid;
-	place-items: center;
-	width: 56px;
-	height: 56px;
-	border-radius: var(--ss-radius-tile);
-	background: var(--ss-tile-blue);
-	color: var(--ss-primary);
-}
-
-.ss-app .ss-kpi__icon .ss-ico {
-	width: 28px;
-	height: 28px;
-}
-
-.ss-kpi__icon--green { background: var(--ss-tile-green); color: var(--ss-ink-green); }
-.ss-kpi__icon--purple,
-.ss-kpi__icon--cream { background: var(--ss-tile-cream); color: var(--ss-ink-cream); }
-.ss-kpi__icon--orange { background: var(--ss-tile-orange); color: var(--ss-ink-orange); }
-
-/* KPI tiles are pastel tiles (no shadow); the icon sits on a white chip in the tile ink. */
 .ss-app .ss-kpi-card {
-	background: var(--ss-tile-blue);
+	--ss-tile: var(--ss-tile-blue);
+	--ss-tile-deep: var(--ss-tile-blue-deep);
+	--ss-badge: var(--ss-brand-blue);
+	--ss-badge-ink: #fff;
+	position: relative;
+	isolation: isolate;
+	display: grid;
+	grid-row: span 4;
+	grid-template-rows: subgrid;
+	row-gap: 0;
+	align-content: start;
+	margin-bottom: var(--ss-tile-gap);
+	padding: 22px;
+	overflow: hidden;
+	border: 0;
+	background: var(--ss-tile);
 	box-shadow: none;
 }
 
-.ss-app .ss-kpi-card--green { background: var(--ss-tile-green); }
-.ss-app .ss-kpi-card--cream { background: var(--ss-tile-yellow); }
-.ss-app .ss-kpi-card--orange { background: var(--ss-tile-orange); }
+/* No subgrid: same look, the rows simply stack. */
+@supports not (grid-template-rows: subgrid) {
 
-.ss-app .ss-kpi-card .ss-kpi__icon {
-	background: rgba(255, 255, 255, 0.75);
+	.ss-app .ss-kpi-card {
+		display: flex;
+	}
 }
 
-.ss-app .ss-kpi-card .ss-kpi__label,
-.ss-app .ss-kpi-card .ss-kpi__meta {
+.ss-app .ss-kpi-card--green { --ss-tile: var(--ss-tile-green); --ss-tile-deep: var(--ss-tile-green-deep); --ss-badge: var(--ss-brand-green); }
+.ss-app .ss-kpi-card--orange { --ss-tile: var(--ss-tile-orange); --ss-tile-deep: var(--ss-tile-orange-deep); --ss-badge: var(--ss-brand-orange); }
+.ss-app .ss-kpi-card--yellow { --ss-tile: var(--ss-tile-yellow); --ss-tile-deep: var(--ss-tile-yellow-deep); --ss-badge: var(--ss-brand-yellow); --ss-badge-ink: var(--ss-text); }
+
+.ss-app .ss-kpi-card--skel {
+	background: var(--ss-card);
+	box-shadow: var(--ss-shadow-card);
+}
+
+/* Skyline deco bottom right (decoration only, behind the text). */
+.ss-app .ss-kpi-card:not(.ss-kpi-card--skel)::after {
+	content: "";
+	position: absolute;
+	right: 22px;
+	bottom: -12px;
+	z-index: -1;
+	width: 9px;
+	height: 52px;
+	border-radius: var(--ss-radius-pill);
+	background: var(--ss-tile-deep);
+	box-shadow: -14px 18px 0 var(--ss-tile-deep), -28px 6px 0 var(--ss-tile-deep), -42px 24px 0 var(--ss-tile-deep);
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+.ss-kpi__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ss-space-3);
+	min-height: 32px;
+}
+
+.ss-kpi__label {
+	min-width: 0;
+	font-size: 15px;
+	font-weight: var(--ss-fw-semibold);
+	line-height: 1.35;
+	color: var(--ss-text);
+}
+
+.ss-kpi__icon {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--ss-badge);
+	color: var(--ss-badge-ink);
+}
+
+.ss-app .ss-kpi__icon .ss-ico {
+	width: 16px;
+	height: 16px;
+}
+
+.ss-kpi__value {
+	align-self: end;
+	margin-top: var(--ss-space-4);
+	font-size: var(--ss-fs-kpi);
+	font-weight: var(--ss-fw-bold);
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+	color: var(--ss-text);
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
+}
+
+.ss-kpi__change {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ss-space-1) 6px;
+	min-height: 22px;
+	margin-top: 10px;
+}
+
+.ss-kpi__vs {
+	font-size: var(--ss-fs-help);
 	color: var(--ss-text-2);
 }
 
@@ -924,24 +993,25 @@ body:has(.ss-app) #wpfooter {
 	background: rgba(255, 255, 255, 0.7);
 }
 
-.ss-kpi__label {
-	font-size: var(--ss-fs-kpi-label);
-	font-weight: var(--ss-fw-medium);
-	color: var(--ss-text-2);
-}
-
-.ss-kpi__value {
-	font-size: var(--ss-fs-kpi);
-	font-weight: var(--ss-fw-heavy);
-	line-height: 1.15;
-	letter-spacing: -0.02em;
-	color: var(--ss-text);
-	overflow-wrap: anywhere;
-}
-
 .ss-kpi__meta {
+	margin-top: 6px;
+	padding-right: 56px;
 	font-size: var(--ss-fs-help);
+	line-height: 1.45;
 	color: var(--ss-text-2);
+}
+
+.ss-kpi-card--skel .ss-skel--value {
+	width: 60%;
+	margin-top: var(--ss-space-4);
+}
+
+.ss-kpi-card--skel .ss-skel + .ss-skel {
+	margin-top: 10px;
+}
+
+.ss-kpi-card--skel .ss-kpi__head .ss-skel {
+	margin-top: 0;
 }
 
 /* ---------- Channels: responses vs revenue ---------- */
@@ -1007,6 +1077,16 @@ body:has(.ss-app) #wpfooter {
 
 .ss-table tr:last-child td {
 	border-bottom: 0;
+}
+
+/* Row hover: a light tint only, never a shadow. */
+.ss-app .ss-table tbody tr {
+	box-shadow: none;
+	transition: background var(--ss-dur-fast) var(--ss-ease);
+}
+
+.ss-app .ss-table tbody tr:hover {
+	background: color-mix(in srgb, var(--ss-bg) 55%, transparent);
 }
 
 .ss-table .is-num {
@@ -2137,7 +2217,7 @@ body:has(.ss-app) #wpfooter {
 	border: 0;
 	border-radius: 50%;
 	background: none;
-	color: #94a3b8;
+	color: var(--ss-placeholder);
 	cursor: help;
 	vertical-align: middle;
 }
@@ -2152,14 +2232,17 @@ body:has(.ss-app) #wpfooter {
 	height: 16px;
 }
 
+/* The text lives in the trigger (aria-describedby); the visible bubble is the shared .ss-pop. */
 .ss-tip__text {
-	position: absolute;
-	bottom: calc(100% + 6px);
-	left: 50%;
-	z-index: 50;
 	display: none;
+}
+
+/* Shared tooltip bubble, fixed to the viewport so scroll boxes never clip it (placed by placeTip()). */
+.ss-pop {
+	position: fixed;
+	z-index: 100000;
 	width: max-content;
-	max-width: min(260px, 70vw);
+	max-width: min(280px, calc(100vw - 16px));
 	padding: var(--ss-space-2) var(--ss-space-3);
 	border-radius: var(--ss-radius-control);
 	background: var(--ss-text);
@@ -2167,31 +2250,36 @@ body:has(.ss-app) #wpfooter {
 	font-size: var(--ss-fs-help);
 	font-weight: var(--ss-fw-regular);
 	line-height: 1.45;
-	letter-spacing: 0;
 	text-align: left;
-	text-transform: none;
 	white-space: normal;
-	transform: translateX(-50%);
 	pointer-events: none;
 	box-shadow: var(--ss-shadow-pop);
+	animation: ss-pop-in var(--ss-dur) var(--ss-ease);
 }
 
-.ss-tip:hover .ss-tip__text,
-.ss-tip:focus-visible .ss-tip__text,
-.ss-tip[aria-expanded="true"] .ss-tip__text {
-	display: block;
+.ss-pop::after {
+	content: "";
+	position: absolute;
+	top: 100%;
+	left: var(--ss-pop-x, 50%);
+	border: 6px solid transparent;
+	border-top-color: var(--ss-text);
+	transform: translateX(-50%);
 }
 
-.ss-table th .ss-tip__text {
-	left: auto;
-	right: -8px;
-	transform: none;
+.ss-pop.is-below::after {
+	top: auto;
+	bottom: 100%;
+	border-top-color: transparent;
+	border-bottom-color: var(--ss-text);
 }
 
-.ss-table th:first-child .ss-tip__text,
-.ss-table th:nth-child(2) .ss-tip__text {
-	right: auto;
-	left: -8px;
+@keyframes ss-pop-in {
+
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
 }
 
 /* ---------- Collapsible ---------- */
@@ -2393,62 +2481,48 @@ body:has(.ss-app) #wpfooter {
 	color: var(--ss-text-2);
 }
 
-/* ---------- Status card ---------- */
+/* ---------- Status card (Swift Outbox card: icon chip, title, sentence, actions; tinted stat chips below) ---------- */
 .ss-status-card {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
-	gap: var(--ss-space-2) var(--ss-space-4);
+	gap: var(--ss-space-1) var(--ss-space-4);
 	align-items: start;
-	padding: var(--ss-space-5) var(--ss-card-pad);
-	border: var(--ss-border-w) solid var(--ss-border);
+	padding: var(--ss-card-pad);
+	border: 0;
 	border-radius: var(--ss-radius-card);
 	background: var(--ss-card);
 	box-shadow: var(--ss-shadow-card);
 }
 
-.ss-status-card.is-live {
-	border-color: transparent;
-	background: radial-gradient(120% 140% at 0% 0%, var(--ss-tile-green) 0%, var(--ss-green-50) 45%, var(--ss-card) 85%);
-}
-
-.ss-status-card.is-problem {
-	border-color: transparent;
-	background: radial-gradient(120% 140% at 0% 0%, var(--ss-tile-orange) 0%, var(--ss-orange-50) 45%, var(--ss-card) 85%);
-}
-
 .ss-status-card__icon {
 	display: grid;
 	place-items: center;
-	width: 44px;
-	height: 44px;
+	width: 40px;
+	height: 40px;
 	border-radius: 12px;
 	background: var(--ss-tile-neutral);
 	color: var(--ss-text-2);
 }
 
+.ss-app .ss-status-card__icon .ss-ico {
+	width: 20px;
+	height: 20px;
+}
+
 .is-live .ss-status-card__icon {
-	background: var(--ss-success);
-	color: #fff;
+	background: var(--ss-tile-green);
+	color: var(--ss-ink-green);
 }
 
 .is-problem .ss-status-card__icon {
-	background: var(--ss-warning);
-	color: #fff;
+	background: var(--ss-tile-orange);
+	color: var(--ss-ink-orange);
 }
 
-/* Off is a normal, expected state (new installs start off): calm cream, never error red. */
-.ss-status-card.is-off {
-	border-color: transparent;
-	background: radial-gradient(120% 140% at 0% 0%, var(--ss-tile-cream) 0%, var(--ss-purple-50) 45%, var(--ss-card) 85%);
-}
-
+/* Off is a normal, expected state (new installs start off): calm yellow, never error red. */
 .is-off .ss-status-card__icon {
-	background: var(--ss-brand-yellow);
-	color: var(--ss-text);
-}
-
-.is-off .ss-status-card__actions {
-	align-self: center;
+	background: var(--ss-tile-yellow);
+	color: var(--ss-ink-cream);
 }
 
 .ss-setup__golive {
@@ -2476,21 +2550,26 @@ body:has(.ss-app) #wpfooter {
 .ss-status-card__main {
 	display: flex;
 	flex-direction: column;
-	gap: var(--ss-space-1);
+	gap: 2px;
 	min-width: 0;
+	min-height: 40px;
+	justify-content: center;
 }
 
 .ss-status-card__title {
-	font-size: var(--ss-fs-card);
-	font-weight: var(--ss-fw-bold);
+	font-size: 18px;
+	font-weight: var(--ss-fw-semibold);
+	line-height: 1.35;
 	color: var(--ss-text);
 }
 
 .ss-status-card__actions {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	justify-content: flex-end;
 	gap: var(--ss-space-2);
+	min-height: 40px;
 }
 
 .ss-status-card__tests {
@@ -2504,22 +2583,78 @@ body:has(.ss-app) #wpfooter {
 }
 
 .ss-facts {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--ss-space-2) var(--ss-space-6);
-	margin-top: var(--ss-space-2) !important;
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--ss-space-3);
+	margin-top: var(--ss-space-4) !important;
 }
 
-.ss-facts dt {
+.ss-fact {
+	--ss-fact: var(--ss-tile-blue);
+	--ss-fact-ink: var(--ss-ink-blue);
+	position: relative;
+	display: flex;
+	flex-direction: column-reverse;
+	justify-content: center;
+	gap: 2px;
+	min-width: 0;
+	min-height: 68px;
+	padding: 14px 16px 14px 66px;
+	border-radius: var(--ss-radius-tile);
+	background: var(--ss-fact);
+}
+
+.ss-fact:nth-child(4n + 2) { --ss-fact: var(--ss-tile-green); --ss-fact-ink: var(--ss-ink-green); }
+.ss-fact:nth-child(4n + 3) { --ss-fact: var(--ss-tile-orange); --ss-fact-ink: var(--ss-ink-orange); }
+.ss-fact:nth-child(4n + 4) { --ss-fact: var(--ss-tile-yellow); --ss-fact-ink: var(--ss-ink-cream); }
+
+.ss-fact dt {
 	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-medium);
 	color: var(--ss-text-2);
 }
 
-.ss-facts dd {
+.ss-fact dd {
 	margin: 0;
-	font-size: var(--ss-fs-label);
-	font-weight: var(--ss-fw-semibold);
+	font-size: 15px;
+	font-weight: var(--ss-fw-bold);
+	line-height: 1.3;
 	color: var(--ss-text);
+	overflow-wrap: anywhere;
+}
+
+.ss-fact__icon {
+	position: absolute;
+	top: 50%;
+	left: 16px;
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	background: var(--ss-card);
+	color: var(--ss-fact-ink);
+	transform: translateY(-50%);
+}
+
+.ss-app .ss-fact__icon .ss-ico {
+	width: 18px;
+	height: 18px;
+}
+
+@media (max-width: 1100px) {
+
+	.ss-facts {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 480px) {
+
+	.ss-facts {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 .ss-problems {
@@ -2909,13 +3044,12 @@ body:has(.ss-app) #wpfooter {
 		gap: var(--ss-space-3);
 	}
 
-	.ss-kpi {
-		padding: var(--ss-space-4);
+	.ss-app .ss-tiles {
+		--ss-tile-gap: var(--ss-space-3);
 	}
 
-	.ss-kpi__icon {
-		width: 48px;
-		height: 48px;
+	.ss-app .ss-kpi-card {
+		padding: var(--ss-space-5);
 	}
 
 	.ss-page-head {
@@ -3036,7 +3170,7 @@ body:has(.ss-app) #wpfooter {
 	line-height: 1.6;
 	letter-spacing: 0;
 	white-space: nowrap;
-	cursor: default;
+	cursor: help;
 }
 
 .ss-app .ss-delta > .ss-ico {
@@ -3063,47 +3197,15 @@ body:has(.ss-app) #wpfooter {
 	outline-offset: 2px;
 }
 
+/* Read by screen readers inside the pill; shown on hover/focus through the shared .ss-pop bubble. */
 .ss-delta__tip {
 	position: absolute;
-	bottom: calc(100% + 6px);
-	left: 50%;
-	z-index: 50;
-	display: none;
-	width: max-content;
-	max-width: min(240px, 70vw);
-	padding: var(--ss-space-2) var(--ss-space-3);
-	border-radius: var(--ss-radius-control);
-	background: var(--ss-text);
-	color: #fff;
-	font-size: var(--ss-fs-help);
-	font-weight: var(--ss-fw-regular);
-	line-height: 1.45;
-	text-align: left;
-	white-space: normal;
-	transform: translateX(-50%);
-	pointer-events: none;
-	box-shadow: var(--ss-shadow-pop);
-}
-
-.ss-delta:hover .ss-delta__tip,
-.ss-delta:focus-visible .ss-delta__tip {
-	display: block;
-}
-
-/* KPI tiles sit in a 4-column row: keep the tip inside the viewport on the right edge. */
-.ss-span-3:last-child .ss-delta__tip {
-	left: auto;
-	right: 0;
-	transform: none;
-}
-
-/* In the channel table the scroll wrapper clips anything above row 1, so tips open to the left. */
-.ss-chan-table .ss-delta__tip {
-	top: 50%;
-	right: calc(100% + 6px);
-	bottom: auto;
-	left: auto;
-	transform: translateY(-50%);
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
 }
 
 .ss-numcell {

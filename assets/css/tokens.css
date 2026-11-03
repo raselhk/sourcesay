@@ -70,6 +70,11 @@
 	--ss-tile-purple: #f1e9cc;
 	--ss-tile-red: #fbdcdc;
 	--ss-tile-neutral: #eceef7;
+	/* Deeper tile tints: decoration only (KPI skyline), never behind text. */
+	--ss-tile-blue-deep: #c3c8f5;
+	--ss-tile-green-deep: #b5dcc1;
+	--ss-tile-orange-deep: #f3c6b1;
+	--ss-tile-yellow-deep: #f6df86;
 	--ss-ink-blue: #3a44d6;
 	--ss-ink-green: #1f7a38;
 	--ss-ink-orange: #b4461a;

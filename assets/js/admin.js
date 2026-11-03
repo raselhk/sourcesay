@@ -839,6 +839,120 @@
 		);
 	}
 
+	/**
+	 * Tooltips: one shared bubble, fixed to the viewport, so table scroll boxes and cards never clip it.
+	 * Triggers are .ss-tip buttons (text in a hidden .ss-tip__text, linked by aria-describedby) and
+	 * .ss-delta pills (text in a visually hidden .ss-delta__tip). Hover or focus shows it, a click or tap
+	 * pins it, Escape, a click elsewhere or leaving closes it.
+	 */
+	const tipPop = { el: null, for: null, pinned: false };
+
+	function popFor() {
+		return tipPop.for && tipPop.for.isConnected ? tipPop.for : null;
+	}
+
+	function placeTip() {
+		const t = popFor();
+		if ( ! t ) {
+			hideTip();
+			return;
+		}
+		const r = t.getBoundingClientRect();
+		const b = tipPop.el;
+		const vw = document.documentElement.clientWidth;
+		const w = b.offsetWidth;
+		const h = b.offsetHeight;
+		const barH = parseFloat( getComputedStyle( document.documentElement ).getPropertyValue( '--wp-admin--admin-bar--height' ) ) || 32;
+		let top = r.top - h - 8;
+		const below = top < barH + 8;
+		if ( below ) {
+			top = r.bottom + 8;
+		}
+		const left = Math.max( 8, Math.min( r.left + ( r.width / 2 ) - ( w / 2 ), vw - w - 8 ) );
+		b.style.top = Math.round( top ) + 'px';
+		b.style.left = Math.round( left ) + 'px';
+		b.style.setProperty( '--ss-pop-x', Math.round( r.left + ( r.width / 2 ) - left ) + 'px' );
+		b.classList.toggle( 'is-below', below );
+	}
+
+	function showTip( t, pinned ) {
+		const src = t.querySelector( ':scope > .ss-tip__text, :scope > .ss-delta__tip' );
+		if ( ! src ) {
+			return;
+		}
+		if ( tipPop.for && tipPop.for !== t ) {
+			hideTip();
+		}
+		if ( ! tipPop.el ) {
+			tipPop.el = el( 'div', { class: 'ss-pop', 'aria-hidden': 'true', hidden: true } );
+		}
+		if ( ! tipPop.el.isConnected ) {
+			mount.appendChild( tipPop.el );
+		}
+		if ( tipPop.for !== t ) {
+			tipPop.el.replaceChildren( ...Array.from( src.childNodes ).map( ( n ) => n.cloneNode( true ) ) );
+		}
+		tipPop.for = t;
+		tipPop.pinned = !! pinned;
+		if ( t.classList.contains( 'ss-tip' ) ) {
+			t.setAttribute( 'aria-expanded', 'true' );
+		}
+		tipPop.el.hidden = false;
+		placeTip();
+	}
+
+	function hideTip() {
+		if ( tipPop.for && tipPop.for.classList.contains( 'ss-tip' ) ) {
+			tipPop.for.setAttribute( 'aria-expanded', 'false' );
+		}
+		tipPop.for = null;
+		tipPop.pinned = false;
+		if ( tipPop.el ) {
+			tipPop.el.hidden = true;
+		}
+	}
+
+	if ( mount ) {
+		const trigger = ( e ) => e.target.closest && e.target.closest( '.ss-tip, .ss-delta' );
+		mount.addEventListener( 'mouseover', ( e ) => {
+			const t = trigger( e );
+			if ( t && t !== popFor() && ! ( popFor() && tipPop.pinned ) ) {
+				showTip( t, false );
+			}
+		} );
+		mount.addEventListener( 'mouseout', ( e ) => {
+			const t = popFor();
+			if ( t && ! tipPop.pinned && t.contains( e.target ) && ! t.contains( e.relatedTarget ) && document.activeElement !== t ) {
+				hideTip();
+			}
+		} );
+		mount.addEventListener( 'focusin', ( e ) => {
+			const t = trigger( e );
+			if ( t && t !== popFor() ) {
+				showTip( t, false );
+			}
+		} );
+		mount.addEventListener( 'focusout', ( e ) => {
+			const t = popFor();
+			if ( t && t.contains( e.target ) && ! t.contains( e.relatedTarget ) ) {
+				hideTip();
+			}
+		} );
+		document.addEventListener( 'keydown', ( e ) => {
+			if ( e.key === 'Escape' && popFor() ) {
+				hideTip();
+			}
+		} );
+		document.addEventListener( 'pointerdown', ( e ) => {
+			const t = popFor();
+			if ( t && ! t.contains( e.target ) ) {
+				hideTip();
+			}
+		}, true );
+		window.addEventListener( 'scroll', () => popFor() && placeTip(), true );
+		window.addEventListener( 'resize', () => popFor() && placeTip() );
+	}
+
 	/** Info tip: a small "i" button that shows a plain-words explanation on hover, focus or tap. */
 	function tip( label, text ) {
 		const id = uid( 'tip' );
@@ -852,18 +966,14 @@
 				click: ( e ) => {
 					e.preventDefault();
 					e.stopPropagation();
-					const open = b.getAttribute( 'aria-expanded' ) !== 'true';
-					mount.querySelectorAll( '.ss-tip[aria-expanded="true"]' ).forEach( ( x ) => x.setAttribute( 'aria-expanded', 'false' ) );
-					b.setAttribute( 'aria-expanded', String( open ) );
-				},
-				keydown: ( e ) => {
-					if ( e.key === 'Escape' ) {
-						b.setAttribute( 'aria-expanded', 'false' );
+					if ( popFor() === b && tipPop.pinned ) {
+						hideTip();
+					} else {
+						showTip( b, true );
 					}
 				},
-				blur: () => b.setAttribute( 'aria-expanded', 'false' ),
 			},
-		}, ico( 'info' ), el( 'span', { class: 'ss-tip__text', role: 'tooltip', id, text } ) );
+		}, ico( 'info' ), el( 'span', { class: 'ss-tip__text', id, text } ) );
 		return b;
 	}
 
@@ -1245,7 +1355,7 @@
 			body.appendChild( reportEmpty( t ) );
 			return;
 		}
-		body.appendChild( el( 'div', { class: 'ss-grid' }, kpis( t, rep, fresh ) ) );
+		body.appendChild( el( 'div', { class: 'ss-grid ss-tiles' }, kpis( t, rep, fresh ) ) );
 		if ( rep.mixed_currency ) {
 			const code = ( rep.currency && rep.currency.code ) || '';
 			body.appendChild( el( 'p', { class: 'ss-note' }, ico( 'info' ), el( 'span', { text: sprintf( /* translators: %s: store base currency code, e.g. USD */ __( 'Revenue is converted to %s, your store’s main currency, so orders paid in other currencies add up correctly.', 'sourcesay' ), code ) } ) ) );
@@ -1355,16 +1465,16 @@
 	}
 
 	function reportSkeleton() {
-		const tile = () => el( 'div', { class: 'ss-card ss-span-3' }, el( 'div', { class: 'ss-kpi' },
-			el( 'span', { class: 'ss-skel ss-skel--tile' } ),
-			el( 'span', { class: 'ss-skel ss-skel--title', style: 'width:70%' } ),
+		const tile = () => el( 'div', { class: 'ss-card ss-span-3 ss-kpi-card ss-kpi-card--skel' },
+			el( 'span', { class: 'ss-kpi__head' }, el( 'span', { class: 'ss-skel ss-skel--title', style: 'width:55%' } ), el( 'span', { class: 'ss-skel ss-kpi__icon' } ) ),
 			el( 'span', { class: 'ss-skel ss-skel--value' } ),
-			el( 'span', { class: 'ss-skel', style: 'width:50%' } )
-		) );
+			el( 'span', { class: 'ss-skel', style: 'width:45%' } ),
+			el( 'span', { class: 'ss-skel', style: 'width:60%' } )
+		);
 		const rows = [ 1, 2, 3, 4, 5 ].map( () => el( 'span', { class: 'ss-skel ss-skel--row' } ) );
 		return el( 'div', { class: 'ss-stack', 'aria-hidden': 'true' },
 			el( 'p', { class: 'ss-sr', text: __( 'Loading report…', 'sourcesay' ) } ),
-			el( 'div', { class: 'ss-grid' }, tile(), tile(), tile(), tile() ),
+			el( 'div', { class: 'ss-grid ss-tiles' }, tile(), tile(), tile(), tile() ),
 			el( 'div', { class: 'ss-card' }, el( 'div', { class: 'ss-card__body' }, el( 'span', { class: 'ss-skel ss-skel--title' } ), el( 'div', { style: 'margin-top:20px' }, rows ) ) ),
 			el( 'div', { class: 'ss-grid' },
 				el( 'div', { class: 'ss-card ss-span-8' }, el( 'div', { class: 'ss-card__body' }, el( 'span', { class: 'ss-skel ss-skel--title' } ), el( 'span', { class: 'ss-skel ss-skel--block' } ) ) ),
@@ -1515,7 +1625,7 @@
 			say = diff > 0 ? __( 'Up from the previous period.', 'sourcesay' ) : ( diff < 0 ? __( 'Down from the previous period.', 'sourcesay' ) : __( 'Same as the previous period.', 'sourcesay' ) );
 		}
 		const tipText = sprintf( /* translators: 1: date range, 2: value in that range */ __( 'Previous period, %1$s: %2$s', 'sourcesay' ), prevRangeText(), o.prevText !== undefined ? o.prevText : fmtNum( prev ) );
-		return el( 'span', { class: 'ss-delta ss-delta--' + cls, tabindex: o.focusable ? '0' : null },
+		return el( 'span', { class: 'ss-delta ss-delta--' + cls, tabindex: o.focusable ? '0' : null, 'data-new': empty ? '1' : null },
 			arrow ? ico( arrow ) : null,
 			el( 'span', { class: 'ss-delta__val', text } ),
 			el( 'span', { class: 'ss-delta__tip', role: 'tooltip' }, el( 'span', { class: 'ss-sr', text: ' ' + say + ' ' } ), tipText )
@@ -1524,18 +1634,21 @@
 
 	function kpis( t, rep, animate ) {
 		const p = ( prevInfo() && rep.previous.totals ) || {};
+		// Swift Outbox tile: title + tip and a round icon badge on one row, the number, the change line, the sub line.
+		// The four rows sit on a shared subgrid, so numbers and badges line up across tiles whatever wraps.
 		const tile = ( icon, tone, label, num, fmt, change, meta, help ) => {
 			const value = el( 'span', { class: 'ss-kpi__value', text: fmt( num ) } );
 			if ( animate ) {
 				countUp( value, +num || 0, fmt );
 			}
-			return el( 'div', { class: 'ss-card ss-span-3 ss-kpi-card' + ( tone ? ' ss-kpi-card--' + tone : '' ) },
-				el( 'div', { class: 'ss-kpi' },
-					el( 'span', { class: 'ss-kpi__icon' + ( tone ? ' ss-kpi__icon--' + tone : '' ) }, ico( icon ) ),
+			return el( 'div', { class: 'ss-card ss-span-3 ss-kpi-card ss-kpi-card--' + tone },
+				el( 'span', { class: 'ss-kpi__head' },
 					el( 'span', { class: 'ss-kpi__label' }, labelWithTip( label, help ) ),
-					el( 'span', { class: 'ss-kpi__valrow' }, value, change ),
-					el( 'span', { class: 'ss-kpi__meta' }, meta )
-				)
+					el( 'span', { class: 'ss-kpi__icon' }, ico( icon ) )
+				),
+				value,
+				el( 'span', { class: 'ss-kpi__change' }, change, change ? el( 'span', { class: 'ss-kpi__vs', text: change.dataset.new ? __( 'no earlier data', 'sourcesay' ) : __( 'vs previous period', 'sourcesay' ) } ) : null ),
+				el( 'span', { class: 'ss-kpi__meta' }, meta )
 			);
 		};
 		const paid = +t.paid_orders || 0;
@@ -1546,11 +1659,11 @@
 			tip( __( 'Skipped', 'sourcesay' ), __( 'Customers who pressed the skip button (for example “Prefer not to say”). Skips do not count as answers, so they never change your channel numbers or the response rate.', 'sourcesay' ) )
 		);
 		return [
-			tile( 'responses', '', __( 'Answers', 'sourcesay' ), t.responses, fmtNum,
+			tile( 'responses', 'blue', __( 'Answers', 'sourcesay' ), t.responses, fmtNum,
 				delta( t.responses, p.responses, { focusable: true } ),
 				sprintf( /* translators: %s: number of paid orders */ _n( 'From %s paid order', 'From %s paid orders', paid, 'sourcesay' ), fmtNum( paid ) ),
 				__( 'How many customers picked an answer. Skips and test orders are not counted.', 'sourcesay' ) ),
-			tile( 'percent', 'cream', __( 'Response rate', 'sourcesay' ), t.response_rate, ( v ) => fmtPct( v, 1 ),
+			tile( 'percent', 'yellow', __( 'Response rate', 'sourcesay' ), t.response_rate, ( v ) => fmtPct( v, 1 ),
 				delta( t.response_rate, p.response_rate, { pts: true, base: p.paid_orders, focusable: true, prevText: fmtPct( p.response_rate, 1 ) } ),
 				skipMeta,
 				__( 'Out of every paid order in this date range, the share whose customer answered the question. 30% means 3 in 10 customers answered. The change is shown in percentage points (pts).', 'sourcesay' ) ),
@@ -1949,11 +2062,15 @@
 		const hints = ( st.problems || [] ).filter( isHint );
 		const live = !! st.survey_live || ! problems.length;
 		const checkout = { block: __( 'Block checkout', 'sourcesay' ), classic: __( 'Classic checkout', 'sourcesay' ) }[ st.checkout_type ] || __( 'Not detected', 'sourcesay' );
+		const fact = ( icon, label, value ) => el( 'div', { class: 'ss-fact' },
+			el( 'dt', null, el( 'span', { class: 'ss-fact__icon' }, ico( icon ) ), label ),
+			el( 'dd', { text: value } )
+		);
 		const facts = el( 'dl', { class: 'ss-facts' },
-			el( 'div', null, el( 'dt', { text: __( 'Last answer', 'sourcesay' ) } ), el( 'dd', { text: relTime( st.last_response_at ) } ) ),
-			el( 'div', null, el( 'dt', { text: __( 'Last 30 days', 'sourcesay' ) } ), el( 'dd', { text: st.paid_orders_30d ? sprintf( /* translators: 1: response rate, 2: number of paid orders */ _n( '%1$s of %2$s paid order answered', '%1$s of %2$s paid orders answered', st.paid_orders_30d, 'sourcesay' ), fmtPct( st.response_rate_30d ), fmtNum( st.paid_orders_30d ) ) : __( 'No paid orders yet', 'sourcesay' ) } ) ),
-			el( 'div', null, el( 'dt', { text: __( 'Checkout', 'sourcesay' ) } ), el( 'dd', { text: checkout } ) ),
-			st.theme ? el( 'div', null, el( 'dt', { text: __( 'Theme', 'sourcesay' ) } ), el( 'dd', { text: st.theme } ) ) : null
+			fact( 'responses', __( 'Last answer', 'sourcesay' ), relTime( st.last_response_at ) ),
+			fact( 'percent', __( 'Last 30 days', 'sourcesay' ), st.paid_orders_30d ? sprintf( /* translators: 1: response rate, 2: number of paid orders */ _n( '%1$s of %2$s paid order answered', '%1$s of %2$s paid orders answered', st.paid_orders_30d, 'sourcesay' ), fmtPct( st.response_rate_30d ), fmtNum( st.paid_orders_30d ) ) : __( 'No paid orders yet', 'sourcesay' ) ),
+			fact( 'bag', __( 'Checkout', 'sourcesay' ), checkout ),
+			st.theme ? fact( 'palette', __( 'Theme', 'sourcesay' ), st.theme ) : null
 		);
 		const tests = +st.test_orders || 0;
 		return el( 'section', { class: 'ss-status-card ' + ( live ? 'is-live' : 'is-problem' ), 'aria-label': __( 'Survey status', 'sourcesay' ) },
@@ -1963,7 +2080,6 @@
 				live ? el( 'p', { class: 'ss-muted', text: __( 'Customers see the question on the order confirmation page right after checkout.', 'sourcesay' ) } ) : null,
 				problems.length ? el( 'ul', { class: 'ss-problems', 'aria-label': live ? __( 'Worth checking', 'sourcesay' ) : __( 'Problems', 'sourcesay' ) }, problems.map( ( p ) => el( 'li', null, el( 'span', { text: p.message } ), ' ', problemLink( p ) ) ) ) : null,
 				hintBoxes( hints ),
-				facts,
 				tests ? el( 'p', { class: 'ss-status-card__tests' }, sprintf( /* translators: %d: number of test orders */ _n( '%d test order exists. Test orders never appear in your reports.', '%d test orders exist. Test orders never appear in your reports.', tests, 'sourcesay' ), tests ) + ' ',
 					el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', on: { click: ( e ) => deleteTests( e.currentTarget ) } }, ico( 'trash' ), __( 'Delete test orders', 'sourcesay' ) )
 				) : null
@@ -1971,7 +2087,8 @@
 			el( 'div', { class: 'ss-status-card__actions' },
 				el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary ss-btn--sm', on: { click: openTest } }, ico( 'bag' ), __( 'Place a test order', 'sourcesay' ) ),
 				el( 'a', { class: 'ss-btn ss-btn--tertiary ss-btn--sm', href: '#survey' }, __( 'Edit survey', 'sourcesay' ) )
-			)
+			),
+			facts
 		);
 	}
 
