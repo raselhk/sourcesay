@@ -884,7 +884,7 @@
 			hideTip();
 		}
 		if ( ! tipPop.el ) {
-			tipPop.el = el( 'div', { class: 'ss-pop', 'aria-hidden': 'true', hidden: true } );
+			tipPop.el = el( 'div', { class: 'ss-tipbubble', 'aria-hidden': 'true', hidden: true } );
 		}
 		if ( ! tipPop.el.isConnected ) {
 			mount.appendChild( tipPop.el );
@@ -1887,6 +1887,12 @@
 		);
 	}
 
+	/** First letter upper-case, for relative times shown on their own ("Yesterday"); keep lower-case inside sentences. */
+	function ucfirst( s ) {
+		s = String( s || '' );
+		return s.charAt( 0 ).toLocaleUpperCase( LOCALE ) + s.slice( 1 );
+	}
+
 	function relTime( iso ) {
 		const d = iso ? new Date( String( iso ).replace( ' ', 'T' ) ) : null;
 		if ( ! d || isNaN( d ) ) {
@@ -2067,7 +2073,7 @@
 			el( 'dd', { text: value } )
 		);
 		const facts = el( 'dl', { class: 'ss-facts' },
-			fact( 'responses', __( 'Last answer', 'sourcesay' ), relTime( st.last_response_at ) ),
+			fact( 'responses', __( 'Last answer', 'sourcesay' ), ucfirst( relTime( st.last_response_at ) ) ),
 			fact( 'percent', __( 'Last 30 days', 'sourcesay' ), st.paid_orders_30d ? sprintf( /* translators: 1: response rate, 2: number of paid orders */ _n( '%1$s of %2$s paid order answered', '%1$s of %2$s paid orders answered', st.paid_orders_30d, 'sourcesay' ), fmtPct( st.response_rate_30d ), fmtNum( st.paid_orders_30d ) ) : __( 'No paid orders yet', 'sourcesay' ) ),
 			fact( 'bag', __( 'Checkout', 'sourcesay' ), checkout ),
 			st.theme ? fact( 'palette', __( 'Theme', 'sourcesay' ), st.theme ) : null
@@ -2354,14 +2360,19 @@
 							d.thank_you = v;
 							changed();
 						} } ),
-						el( 'p', { class: 'ss-field__help', text: __( 'Customers can always skip the question. Answers, icons, follow-up questions, colours and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
+						el( 'div', { class: 'ss-setup__answers', role: 'group', 'aria-labelledby': 'ss-setup-answers' },
+							el( 'p', { class: 'ss-field__label', id: 'ss-setup-answers', text: __( 'Answers customers can pick', 'sourcesay' ) } ),
+							el( 'p', { class: 'ss-field__help', text: __( 'Rename, reorder, change icons, turn answers off or add a follow-up question.', 'sourcesay' ) } ),
+							answersEditor( true )
+						),
+						el( 'p', { class: 'ss-field__help', text: __( 'Customers can always skip the question. Colours and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
 					),
 					foot( back( 1 ), next )
 				) ),
 				el( 'div', { class: 'ss-builder__side' }, card( { icon: 'eye', tone: 'cream', title: __( 'Preview', 'sourcesay' ), desc: __( 'Click an answer to try it.', 'sourcesay' ) }, R.preview ) )
 			) );
+			renderOpts();
 			renderPreview();
-			updateErrors();
 			return;
 		}
 
@@ -2992,14 +3003,7 @@
 			)
 		);
 
-		R.opts = el( 'ul', { class: 'ss-opts', 'aria-label': __( 'Answers', 'sourcesay' ) } );
-		R.addBtn = el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary', on: { click: addOption } }, ico( 'plus' ), __( 'Add answer', 'sourcesay' ) );
-		R.optCount = el( 'span', { class: 'ss-field__help' } );
-		const optsCard = card( { icon: 'list', tone: 'green', title: __( 'Answers', 'sourcesay' ), desc: __( 'Drag the handle or use the arrow buttons to reorder. Turn an answer off to hide it without deleting it.', 'sourcesay' ) },
-			R.opts,
-			errBox( 'options' ),
-			el( 'div', { class: 'ss-opts__foot' }, R.addBtn, R.optCount )
-		);
+		const optsCard = card( { icon: 'list', tone: 'green', title: __( 'Answers', 'sourcesay' ), desc: __( 'Drag the handle or use the arrow buttons to reorder. Turn an answer off to hide it without deleting it.', 'sourcesay' ) }, answersEditor() );
 
 		const otherFields = el( 'div', { class: 'ss-row2', hidden: ! d.other.enabled },
 			textField( { label: __( 'Label', 'sourcesay' ), value: d.other.label, max: 60, errKey: 'other', onInput: ( v ) => {
@@ -3227,6 +3231,14 @@
 		) ) );
 	}
 
+	/** The answers list with its add button (Survey tab and setup step 2). Call renderOpts() once it is in the page. */
+	function answersEditor( compact ) {
+		R.opts = el( 'ul', { class: 'ss-opts' + ( compact ? ' ss-opts--compact' : '' ), 'aria-label': __( 'Answers', 'sourcesay' ) } );
+		R.addBtn = el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary' + ( compact ? ' ss-btn--sm' : '' ), on: { click: addOption } }, ico( 'plus' ), __( 'Add answer', 'sourcesay' ) );
+		R.optCount = el( 'span', { class: 'ss-field__help' } );
+		return [ R.opts, errBox( 'options' ), el( 'div', { class: 'ss-opts__foot' }, R.addBtn, R.optCount ) ];
+	}
+
 	function addOption() {
 		const d = S.draft;
 		if ( d.options.length >= MAX_OPTIONS ) {
@@ -3271,7 +3283,7 @@
 		}
 		changed();
 		toast( 'info', sprintf( /* translators: %s: answer label */ __( '“%s” removed.', 'sourcesay' ), o.label || __( 'Answer', 'sourcesay' ) ), { label: __( 'Undo', 'sourcesay' ), run: () => {
-			if ( S.tab !== 'survey' || ! R.opts ) {
+			if ( ! R.opts ) {
 				return;
 			}
 			S.draft.options.splice( Math.min( i, S.draft.options.length ), 0, o );

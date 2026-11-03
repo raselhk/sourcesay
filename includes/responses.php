@@ -150,7 +150,11 @@ function sourcesay_save_response( $order, $answer_id, $followup = '', $other = '
 			/* translators: %s: answer label. */
 			$note = sprintf( __( 'Customer said: %s', 'sourcesay' ), $data['answer_label'] );
 		}
-		$order->add_order_note( $note, false ); // Private note.
+		$note_id = $order->add_order_note( $note, false ); // Private note.
+		if ( $note_id ) {
+			$order->update_meta_data( '_sourcesay_note_id', (int) $note_id ); // So the privacy eraser can redact it.
+			$order->save_meta_data();
+		}
 	}
 
 	/**

@@ -38,20 +38,21 @@ function sourcesay_register_eraser( $items ) {
 add_filter( 'wp_privacy_personal_data_erasers', 'sourcesay_register_eraser' );
 
 /**
- * Order ids billed to an email address (50 per page).
+ * Order ids billed to an email address or placed by the account with that email (50 per page).
  *
  * @param string $email Email.
  * @param int    $page  1-based page.
  * @return int[]
  */
 function sourcesay_privacy_order_ids( $email, $page ) {
+	$user = get_user_by( 'email', $email );
 	return wc_get_orders(
 		array(
-			'billing_email' => $email,
-			'limit'         => 50,
-			'paged'         => max( 1, (int) $page ),
-			'return'        => 'ids',
-			'status'        => array_keys( wc_get_order_statuses() ),
+			'customer' => $user ? array( $email, (int) $user->ID ) : array( $email ), // Billing email OR customer id.
+			'limit'    => 50,
+			'paged'    => max( 1, (int) $page ),
+			'return'   => 'ids',
+			'status'   => array_keys( wc_get_order_statuses() ),
 		)
 	);
 }
@@ -111,7 +112,7 @@ function sourcesay_privacy_export( $email, $page = 1 ) {
 }
 
 /**
- * Eraser callback: blank free text and unlink the customer.
+ * Eraser callback: blank free text, unlink the customer and cut the free text out of the "Customer said" order note.
  *
  * @param string $email Email.
  * @param int    $page  Page.
@@ -122,8 +123,20 @@ function sourcesay_privacy_erase( $email, $page = 1 ) {
 	$ids     = sourcesay_privacy_order_ids( $email, $page );
 	$removed = false;
 	foreach ( $ids as $order_id ) {
-		if ( ! sourcesay_get_response( $order_id ) ) {
+		$row = sourcesay_get_response( $order_id );
+		if ( ! $row ) {
 			continue;
+		}
+		$order   = wc_get_order( $order_id );
+		$note_id = $order ? (int) $order->get_meta( '_sourcesay_note_id' ) : 0;
+		if ( $note_id && get_comment( $note_id ) ) {
+			wp_update_comment(
+				array(
+					'comment_ID'      => $note_id,
+					/* translators: %s: answer label. */
+					'comment_content' => sprintf( __( 'Customer said: %s', 'sourcesay' ), $row['answer_label'] ),
+				)
+			);
 		}
 		$wpdb->update(
 			sourcesay_table(),

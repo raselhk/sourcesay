@@ -172,10 +172,10 @@ function sourcesay_process_submission( $req ) {
 	$key      = isset( $req['order_key'] ) && is_scalar( $req['order_key'] ) ? sanitize_text_field( $req['order_key'] ) : '';
 	$order    = $order_id ? wc_get_order( $order_id ) : false;
 
-	if ( sourcesay_rate_limited() ) {
+	if ( ! $order || '' === $key || ! hash_equals( (string) $order->get_order_key(), $key ) ) {
 		return 'error';
 	}
-	if ( ! $order || '' === $key || ! hash_equals( (string) $order->get_order_key(), $key ) ) {
+	if ( sourcesay_rate_limited( $order_id ) ) {
 		return 'error';
 	}
 	if ( ! empty( $req['ss_website'] ) ) {
@@ -215,14 +215,37 @@ add_action( 'admin_post_sourcesay_submit', 'sourcesay_handle_submit' );
 add_action( 'admin_post_nopriv_sourcesay_submit', 'sourcesay_handle_submit' );
 
 /**
- * Per-IP rate limit: 10 submissions per 10 minutes.
+ * Visitor IP. REMOTE_ADDR by default; sites behind a trusted proxy can filter it.
  *
- * @return bool True when the caller is over the limit.
+ * @return string
  */
-function sourcesay_rate_limited() {
-	$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-	$key   = 'sourcesay_rl_' . md5( $ip );
-	$count = (int) get_transient( $key );
-	set_transient( $key, $count + 1, 10 * MINUTE_IN_SECONDS );
-	return $count >= 10;
+function sourcesay_client_ip() {
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+	/**
+	 * Filter the visitor IP used for the survey rate limit.
+	 *
+	 * @param string $ip REMOTE_ADDR.
+	 */
+	return (string) apply_filters( 'sourcesay_client_ip', $ip );
+}
+
+/**
+ * Rate limit for submissions that already passed the order-key check:
+ * 10 per IP and 5 per order in 10 minutes, so bad-key floods cannot lock real customers out.
+ *
+ * @param int $order_id Order id.
+ * @return bool True when the caller is over a limit.
+ */
+function sourcesay_rate_limited( $order_id ) {
+	$over   = false;
+	$limits = array(
+		'sourcesay_rl_' . md5( sourcesay_client_ip() ) => 10,
+		'sourcesay_rlo_' . absint( $order_id )         => 5,
+	);
+	foreach ( $limits as $key => $max ) {
+		$count = (int) get_transient( $key );
+		set_transient( $key, $count + 1, 10 * MINUTE_IN_SECONDS );
+		$over = $over || $count >= $max;
+	}
+	return $over;
 }

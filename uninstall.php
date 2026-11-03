@@ -17,11 +17,15 @@ if ( empty( $sourcesay_settings['delete_on_uninstall'] ) ) {
 global $wpdb;
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}sourcesay_responses" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange
 
-$wpdb->delete( $wpdb->postmeta, array( 'meta_key' => '_sourcesay_answer_id' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 $sourcesay_hpos_meta = $wpdb->prefix . 'wc_orders_meta';
-if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $sourcesay_hpos_meta ) ) === $sourcesay_hpos_meta ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-	$wpdb->delete( $sourcesay_hpos_meta, array( 'meta_key' => '_sourcesay_answer_id' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$sourcesay_has_hpos  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $sourcesay_hpos_meta ) ) === $sourcesay_hpos_meta; // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+foreach ( array( '_sourcesay_answer_id', '_sourcesay_test', '_sourcesay_note_id' ) as $sourcesay_meta_key ) {
+	$wpdb->delete( $wpdb->postmeta, array( 'meta_key' => $sourcesay_meta_key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+	if ( $sourcesay_has_hpos ) {
+		$wpdb->delete( $sourcesay_hpos_meta, array( 'meta_key' => $sourcesay_meta_key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+	}
 }
+delete_metadata( 'user', 0, 'sourcesay_dismissed_pro_card', '', true );
 
 delete_option( 'sourcesay_settings' );
 delete_option( 'sourcesay_db_version' );

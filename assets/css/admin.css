@@ -1567,6 +1567,62 @@ body:has(.ss-app) #wpfooter {
 	margin-top: var(--ss-space-3);
 }
 
+/* Compact answers list (setup step 2): same controls, tighter rows on pointer screens; phones keep 44px targets. */
+.ss-setup__answers {
+	display: grid;
+	gap: 4px;
+}
+
+.ss-setup__answers .ss-opts {
+	margin-top: var(--ss-space-2);
+}
+
+@media (min-width: 783px) {
+
+	.ss-opts--compact {
+		gap: 6px;
+	}
+
+	.ss-opts--compact .ss-opt__main {
+		padding: 4px 4px 0 0;
+	}
+
+	.ss-app .ss-opts--compact .ss-drag,
+	.ss-app .ss-opts--compact .ss-icon-btn {
+		height: 34px;
+	}
+
+	.ss-app .ss-opts--compact .ss-icon-btn,
+	.ss-app .ss-opts--compact .ss-opt__iconbtn {
+		width: 34px;
+	}
+
+	.ss-app .ss-opts--compact .ss-opt__iconbtn {
+		height: 34px;
+		border-radius: 9px;
+	}
+
+	.ss-app .ss-opts--compact .ss-opt__label-input {
+		min-height: 34px;
+		height: 34px;
+		padding-top: 0;
+		padding-bottom: 0;
+	}
+
+	.ss-opts--compact .ss-opt__tools {
+		padding: 0 4px 2px 32px;
+	}
+
+	.ss-opts--compact .ss-toggle--compact {
+		min-height: 34px;
+	}
+
+	.ss-opts--compact .ss-opt__fu {
+		margin: 2px var(--ss-space-2) var(--ss-space-2) 32px;
+		padding: var(--ss-space-2) var(--ss-space-3);
+	}
+}
+
 /* Inline confirmation (preset) */
 .ss-confirm {
 	display: flex;
@@ -2232,13 +2288,13 @@ body:has(.ss-app) #wpfooter {
 	height: 16px;
 }
 
-/* The text lives in the trigger (aria-describedby); the visible bubble is the shared .ss-pop. */
+/* The text lives in the trigger (aria-describedby); the visible bubble is the shared .ss-tipbubble. */
 .ss-tip__text {
 	display: none;
 }
 
 /* Shared tooltip bubble, fixed to the viewport so scroll boxes never clip it (placed by placeTip()). */
-.ss-pop {
+.ss-tipbubble {
 	position: fixed;
 	z-index: 100000;
 	width: max-content;
@@ -2257,7 +2313,7 @@ body:has(.ss-app) #wpfooter {
 	animation: ss-pop-in var(--ss-dur) var(--ss-ease);
 }
 
-.ss-pop::after {
+.ss-tipbubble::after {
 	content: "";
 	position: absolute;
 	top: 100%;
@@ -2267,7 +2323,7 @@ body:has(.ss-app) #wpfooter {
 	transform: translateX(-50%);
 }
 
-.ss-pop.is-below::after {
+.ss-tipbubble.is-below::after {
 	top: auto;
 	bottom: 100%;
 	border-top-color: transparent;
@@ -3197,7 +3253,7 @@ body:has(.ss-app) #wpfooter {
 	outline-offset: 2px;
 }
 
-/* Read by screen readers inside the pill; shown on hover/focus through the shared .ss-pop bubble. */
+/* Read by screen readers inside the pill; shown on hover/focus through the shared .ss-tipbubble bubble. */
 .ss-delta__tip {
 	position: absolute;
 	width: 1px;

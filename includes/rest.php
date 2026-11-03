@@ -78,19 +78,19 @@ function sourcesay_rest_admin_permission() {
 }
 
 /**
- * Public route permission: rate limit, then the order key.
+ * Public route permission: the order key, then the rate limit (only valid keys count).
  *
  * @param WP_REST_Request $request Request.
  * @return true|WP_Error
  */
 function sourcesay_rest_response_permission( $request ) {
-	if ( sourcesay_rate_limited() ) {
-		return new WP_Error( 'sourcesay_rate_limited', __( 'Too many requests. Please try again later.', 'sourcesay' ), array( 'status' => 429 ) );
-	}
 	$order = wc_get_order( absint( $request->get_param( 'order_id' ) ) );
 	$key   = $request->get_param( 'order_key' );
 	if ( ! $order || ! is_string( $key ) || '' === $key || ! hash_equals( (string) $order->get_order_key(), $key ) ) {
 		return new WP_Error( 'sourcesay_forbidden', __( 'Invalid order.', 'sourcesay' ), array( 'status' => 403 ) );
+	}
+	if ( sourcesay_rate_limited( $order->get_id() ) ) {
+		return new WP_Error( 'sourcesay_rate_limited', __( 'Too many requests. Please try again later.', 'sourcesay' ), array( 'status' => 429 ) );
 	}
 	return true;
 }
