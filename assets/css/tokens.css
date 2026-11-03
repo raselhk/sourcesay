@@ -25,39 +25,56 @@
 }
 
 .sourcesay.ss-app {
-	/* Colour */
+	/* Colour: SwiftWebDev palette (portfolio/logo/swd-tokens.json). Blue is the only action colour. */
 	--ss-primary: #4f5bff;
-	--ss-primary-hover: #3f49e8;
-	--ss-nav-bg: #172437;
-	--ss-bg: #f5f7fb;
+	--ss-primary-hover: #3f49e0;
+	--ss-primary-ink: #3a44d6; /* blue text on tints and the page background (AA everywhere) */
+	--ss-primary-soft: #dfe1fb;
+	--ss-nav-bg: #1a1a1d;
+	--ss-frame: #1a1a1d;
+	--ss-frame-2: #26262b;
+	--ss-frame-text: #c9c9d6;
+	--ss-bg: #eef0fa;
 	--ss-card: #fff;
-	--ss-text: #111827;
-	--ss-text-2: #64748b;
-	--ss-border: #e5eaf2;
-	--ss-border-strong: #cfd6e3;
-	--ss-success: #059669;
-	--ss-success-text: #047857;
-	--ss-warning: #d97706;
-	--ss-warning-text: #b45309;
-	--ss-danger: #dc2626;
-	--ss-danger-text: #b91c1c;
-	--ss-info: #0284c7;
+	--ss-text: #1b1b2f;
+	--ss-text-2: #5f6072; /* 4.8:1 or better on every tint below */
+	--ss-border: #e4e6f2;
+	--ss-border-strong: #cdd0e3;
+	--ss-success: #2e9e4c;
+	--ss-success-text: #1f7a38;
+	--ss-warning: #e8672b;
+	--ss-warning-text: #b4461a;
+	--ss-danger: #d23b3b;
+	--ss-danger-text: #b42318;
+	--ss-info: #3a44d6;
 	--ss-purple: #7c3aed;
-	--ss-blue-50: #eff6ff;
-	--ss-green-50: #ecfdf5;
-	--ss-orange-50: #fff7ed;
-	--ss-red-50: #fef2f2;
-	--ss-purple-50: #f5f3ff;
-	--ss-placeholder: #8a94a6;
+	--ss-blue-50: #eef0ff;
+	--ss-green-50: #e8f6ec;
+	--ss-orange-50: #fdefe8;
+	--ss-red-50: #fdeceb;
+	--ss-purple-50: #f8f3e1;
+	--ss-placeholder: #6b6c7f;
 
-	/* Pastel icon tiles */
-	--ss-tile-blue: #e8eeff;
-	--ss-tile-green: #e1f6ec;
-	--ss-tile-purple: #efe8ff;
-	--ss-tile-orange: #ffeedc;
-	--ss-tile-red: #ffe7e9;
-	--ss-tile-neutral: #eef1f6;
-	--ss-orange: #f97316;
+	/* Brand accents (decoration only: orbs, chips, dots, never text on white) */
+	--ss-brand-orange: #e8672b;
+	--ss-brand-green: #2e9e4c;
+	--ss-brand-blue: #4f5bff;
+	--ss-brand-yellow: #f2c23a;
+
+	/* Pastel tiles rotate lavender, mint, peach, cream, yellow. Text on a tile uses its ink. */
+	--ss-tile-blue: #dfe1fb;
+	--ss-tile-green: #d6eedd;
+	--ss-tile-orange: #fbe3d8;
+	--ss-tile-cream: #f1e9cc;
+	--ss-tile-yellow: #fff3c4;
+	--ss-tile-purple: #f1e9cc;
+	--ss-tile-red: #fbdcdc;
+	--ss-tile-neutral: #eceef7;
+	--ss-ink-blue: #3a44d6;
+	--ss-ink-green: #1f7a38;
+	--ss-ink-orange: #b4461a;
+	--ss-ink-cream: #7a5b00;
+	--ss-orange: #e8672b;
 
 	/* Chart series: responses vs revenue */
 	--ss-series-responses: #a5b4fc;
@@ -72,7 +89,7 @@
 	--ss-fs-kpi: 30px;
 	--ss-fs-body: 14px;
 	--ss-fs-label: 13px;
-	--ss-fs-help: 12px;
+	--ss-fs-help: 13px;
 	--ss-fw-regular: 400;
 	--ss-fw-medium: 500;
 	--ss-fw-semibold: 600;
@@ -96,20 +113,24 @@
 	--ss-touch: 44px;
 
 	/* Shape + elevation */
-	--ss-radius-card: 16px;
+	--ss-radius-frame: 24px;
+	--ss-radius-card: 18px;
 	--ss-radius-tile: 14px;
 	--ss-card-pad: 24px;
 	--ss-radius-control: 8px;
 	--ss-radius-pill: 999px;
 	--ss-border-w: 1px;
-	--ss-shadow-pop: 0 8px 24px rgba(17, 24, 39, 0.12);
-	--ss-shadow-card: 0 1px 2px rgba(23, 36, 55, 0.04), 0 8px 24px rgba(79, 91, 255, 0.06);
-	--ss-shadow-drag: 0 2px 4px rgba(23, 36, 55, 0.06), 0 18px 40px rgba(79, 91, 255, 0.18);
+	--ss-shadow-pop: 0 12px 40px rgba(27, 27, 47, 0.14);
+	--ss-shadow-card: 0 1px 2px rgba(27, 27, 47, 0.03), 0 10px 30px rgba(79, 91, 255, 0.06);
+	--ss-shadow-drag: 0 2px 4px rgba(27, 27, 47, 0.06), 0 18px 40px rgba(79, 91, 255, 0.18);
+	--ss-shadow-btn: 0 8px 24px rgba(79, 91, 255, 0.32);
 
 	/* Motion */
 	--ss-ease: cubic-bezier(0.16, 1, 0.3, 1);
+	--ss-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 	--ss-dur-fast: 120ms;
 	--ss-dur: 200ms;
+	--ss-dur-enter: 560ms;
 
 	font-family: var(--ss-font);
 	font-size: var(--ss-fs-body);
@@ -141,5 +162,6 @@
 	.sourcesay.ss-app {
 		--ss-dur-fast: 0ms;
 		--ss-dur: 0ms;
+		--ss-dur-enter: 0ms;
 	}
 }

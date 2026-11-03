@@ -1,31 +1,45 @@
-/* SourceSay Dashboard widget. Tokens match assets/css/tokens.css (SwiftWebDev design system). */
+/* SourceSay Dashboard widget. Tokens match assets/css/tokens.css (SwiftWebDev design system).
+   Bars and their colours live in charts.css; this file styles the frame around them. */
 .sourcesay.ss-widget {
 	--ss-primary: #4f5bff;
-	--ss-text: #111827;
-	--ss-text-2: #64748b;
-	--ss-border: #e5eaf2;
-	--ss-tile-blue: #e8eeff;
-	--ss-radius: 12px;
+	--ss-primary-ink: #3a44d6;
+	--ss-text: #1b1b2f;
+	--ss-text-2: #5f6072;
+	--ss-border: #e4e6f2;
+	--ss-tile-blue: #dfe1fb;
+	--ss-tile-cream: #f1e9cc;
+	--ss-ink-blue: #3a44d6;
+	--ss-ink-cream: #7a5b00;
+	--ss-radius: 14px;
 	color: var(--ss-text);
 	font-size: 14px;
+	line-height: 1.5;
 }
 
 .sourcesay.ss-widget .ss-widget__empty {
-	background: var(--ss-tile-blue);
+	background: var(--ss-tile-cream);
 	border-radius: var(--ss-radius);
 	color: var(--ss-text);
 	margin: 0 0 12px;
-	padding: 12px 16px;
+	padding: 14px 16px;
 }
 
+/* Response rate: a lavender tile with the number large, so it reads at a glance. */
 .sourcesay.ss-widget .ss-widget__rate {
-	color: var(--ss-text-2);
 	margin: 0 0 12px;
+	padding: 12px 16px;
+	border-radius: var(--ss-radius);
+	background: var(--ss-tile-blue);
+	color: var(--ss-text-2);
 }
 
 .sourcesay.ss-widget .ss-widget__rate strong {
-	color: var(--ss-text);
-	font-size: 20px;
+	margin-right: 2px;
+	color: var(--ss-ink-blue);
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
 }
 
 .sourcesay.ss-widget .ss-widget__table {
@@ -36,8 +50,12 @@
 .sourcesay.ss-widget .ss-widget__table th,
 .sourcesay.ss-widget .ss-widget__table td {
 	border-bottom: 1px solid var(--ss-border);
-	padding: 8px 4px;
+	padding: 10px 4px;
 	text-align: left;
+}
+
+.sourcesay.ss-widget .ss-widget__table tr:last-child td {
+	border-bottom: 0;
 }
 
 .sourcesay.ss-widget .ss-widget__table th {
@@ -46,9 +64,14 @@
 	font-weight: 600;
 }
 
+.sourcesay.ss-widget .ss-widget__table td:first-child {
+	font-weight: 600;
+}
+
 .sourcesay.ss-widget .ss-widget__table th:not(:first-child),
 .sourcesay.ss-widget .ss-widget__table td:not(:first-child) {
 	text-align: right;
+	white-space: nowrap;
 }
 
 .sourcesay.ss-widget .ss-widget__more {
@@ -56,7 +79,11 @@
 }
 
 .sourcesay.ss-widget .ss-widget__more a {
-	color: var(--ss-primary);
+	color: var(--ss-primary-ink);
 	font-weight: 600;
 	text-decoration: none;
+}
+
+.sourcesay.ss-widget .ss-widget__more a:hover {
+	text-decoration: underline;
 }

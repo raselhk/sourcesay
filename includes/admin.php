@@ -81,6 +81,7 @@ function sourcesay_admin_assets( $hook ) {
 	}
 	if ( file_exists( SOURCESAY_PATH . 'assets/css/admin.css' ) ) {
 		wp_enqueue_style( 'sourcesay-admin', SOURCESAY_URL . 'assets/css/admin.css', array(), sourcesay_asset_version( 'assets/css/admin.css' ) );
+		wp_enqueue_style( 'sourcesay-charts', SOURCESAY_URL . 'assets/css/charts.css', array( 'sourcesay-admin' ), sourcesay_asset_version( 'assets/css/charts.css' ) );
 	}
 	if ( ! file_exists( SOURCESAY_PATH . 'assets/js/admin.js' ) ) {
 		return;
@@ -103,6 +104,7 @@ function sourcesay_admin_assets( $hook ) {
 			'shopUrl'        => wc_get_page_permalink( 'shop' ),
 			'homeUrl'        => home_url( '/' ),
 			'icons'          => SOURCESAY_URL . 'assets/icons.svg',
+			'logo'           => SOURCESAY_URL . 'assets/img/logo-mark.svg',
 			'version'        => SOURCESAY_VERSION,
 			'wcSourceLabels' => sourcesay_wc_source_labels(),
 			// Pro promo card (bottom of Reports): hidden when Pro is active or dismissed in the last 90 days.

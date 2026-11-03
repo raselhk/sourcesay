@@ -338,7 +338,7 @@
 	function fmtMoneyShort( v ) {
 		const c = currency();
 		if ( Math.abs( v ) >= 1000 ) {
-			return withSymbol( numberFormat( v / 1000, v >= 10000 ? 0 : 1, c.thousand, c.decimal ) + 'k', c );
+			return withSymbol( numberFormat( v / 1000, v >= 10000 || v % 1000 === 0 ? 0 : 1, c.thousand, c.decimal ) + 'k', c );
 		}
 		return withSymbol( numberFormat( v, 0, c.thousand, c.decimal ), c );
 	}
@@ -816,6 +816,7 @@
 		const titleId = uid( 'c' );
 		return el( 'section', { class: 'ss-card' + ( o.class ? ' ' + o.class : '' ), 'aria-labelledby': titleId },
 			el( 'div', { class: 'ss-card__head' },
+				o.icon ? el( 'span', { class: 'ss-chip-ico' + ( o.tone ? ' ss-chip-ico--' + o.tone : '' ) }, ico( o.icon ) ) : null,
 				el( 'div', { class: 'ss-card__headtext' },
 					el( 'h2', { class: 'ss-card__title', id: titleId, text: o.title } ),
 					o.desc ? el( 'p', { class: 'ss-card__desc', text: o.desc } ) : null
@@ -870,9 +871,13 @@
 		return el( 'span', { class: 'ss-label-tip' }, label, tip( label, text ) );
 	}
 
-	function details( summary, body, open ) {
+	function details( summary, body, open, icon, tone ) {
 		return el( 'details', { class: 'ss-details', open: !! open },
-			el( 'summary', { class: 'ss-details__summary' }, el( 'span', { text: summary } ), ico( 'caret-down', 'ss-ico ss-details__caret' ) ),
+			el( 'summary', { class: 'ss-details__summary' },
+				icon ? el( 'span', { class: 'ss-chip-ico' + ( tone ? ' ss-chip-ico--' + tone : '' ) }, ico( icon ) ) : null,
+				el( 'span', { class: 'ss-details__label', text: summary } ),
+				ico( 'caret-down', 'ss-ico ss-details__caret' )
+			),
 			el( 'div', { class: 'ss-details__body' }, body )
 		);
 	}
@@ -964,7 +969,7 @@
 		);
 		const header = el( 'header', { class: 'ss-header' },
 			el( 'div', { class: 'ss-brand' },
-				el( 'span', { class: 'ss-brand__mark' }, ico( 'responses' ) ),
+				el( 'span', { class: 'ss-brand__mark' }, cfg.logo ? el( 'img', { src: cfg.logo, alt: '', width: 26, height: 26 } ) : ico( 'responses' ) ),
 				el( 'span', { class: 'ss-brand__text' },
 					el( 'span', { class: 'ss-brand__name', text: 'SourceSay' } ),
 					el( 'span', { class: 'ss-brand__by', text: __( 'by SwiftWebDev', 'sourcesay' ) } )
@@ -1056,7 +1061,7 @@
 		} );
 		Object.keys( R ).forEach( ( k ) => delete R[ k ] );
 		main.textContent = '';
-		const wrap = el( 'div', { class: 'ss-wrap' } );
+		const wrap = el( 'div', { class: 'ss-wrap' + ( focus ? ' is-enter' : '' ) } );
 		main.appendChild( wrap );
 		if ( S.tab === 'reports' ) {
 			renderReports( wrap );
@@ -1230,11 +1235,17 @@
 		}
 		const rep = S.report || {};
 		const t = rep.totals || {};
+		// Staggered entrance and KPI count-up run once per freshly loaded report, not on every re-render.
+		const fresh = ! countedReports.has( rep );
+		countedReports.add( rep );
+		if ( fresh ) {
+			body.classList.add( 'is-enter' );
+		}
 		if ( ! t.responses ) {
 			body.appendChild( reportEmpty( t ) );
 			return;
 		}
-		body.appendChild( el( 'div', { class: 'ss-grid' }, kpis( t, rep ) ) );
+		body.appendChild( el( 'div', { class: 'ss-grid' }, kpis( t, rep, fresh ) ) );
 		if ( rep.mixed_currency ) {
 			const code = ( rep.currency && rep.currency.code ) || '';
 			body.appendChild( el( 'p', { class: 'ss-note' }, ico( 'info' ), el( 'span', { text: sprintf( /* translators: %s: store base currency code, e.g. USD */ __( 'Revenue is converted to %s, your store’s main currency, so orders paid in other currencies add up correctly.', 'sourcesay' ), code ) } ) ) );
@@ -1412,6 +1423,35 @@
 		);
 	}
 
+	/* ---------- Motion helpers (vanilla, reduced-motion aware) ---------- */
+	const countedReports = new WeakSet();
+
+	function reducedMotion() {
+		return !! ( window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches );
+	}
+
+	/** Count a KPI from 0 to its value with an ease-out curve; the final frame always prints the exact formatted value. */
+	function countUp( node, to, fmt ) {
+		if ( reducedMotion() || ! ( to > 0 ) || ! window.requestAnimationFrame ) {
+			return;
+		}
+		const dur = 900;
+		let start = 0;
+		const step = ( now ) => {
+			start = start || now;
+			const k = Math.min( 1, ( now - start ) / dur );
+			if ( k > 0.05 && ! node.isConnected ) {
+				return; // Re-rendered away.
+			}
+			node.textContent = fmt( k < 1 ? to * ( 1 - Math.pow( 2, -10 * k ) ) : to );
+			if ( k < 1 ) {
+				window.requestAnimationFrame( step );
+			}
+		};
+		node.textContent = fmt( 0 );
+		window.requestAnimationFrame( step );
+	}
+
 	/* ---------- Change vs the previous period ---------- */
 	function prevInfo() {
 		const p = S.report && S.report.previous;
@@ -1482,16 +1522,22 @@
 		);
 	}
 
-	function kpis( t, rep ) {
+	function kpis( t, rep, animate ) {
 		const p = ( prevInfo() && rep.previous.totals ) || {};
-		const tile = ( icon, tone, label, value, change, meta, help ) => el( 'div', { class: 'ss-card ss-span-3' },
-			el( 'div', { class: 'ss-kpi' },
-				el( 'span', { class: 'ss-kpi__icon' + ( tone ? ' ss-kpi__icon--' + tone : '' ) }, ico( icon ) ),
-				el( 'span', { class: 'ss-kpi__label' }, labelWithTip( label, help ) ),
-				el( 'span', { class: 'ss-kpi__valrow' }, el( 'span', { class: 'ss-kpi__value', text: value } ), change ),
-				el( 'span', { class: 'ss-kpi__meta' }, meta )
-			)
-		);
+		const tile = ( icon, tone, label, num, fmt, change, meta, help ) => {
+			const value = el( 'span', { class: 'ss-kpi__value', text: fmt( num ) } );
+			if ( animate ) {
+				countUp( value, +num || 0, fmt );
+			}
+			return el( 'div', { class: 'ss-card ss-span-3 ss-kpi-card' + ( tone ? ' ss-kpi-card--' + tone : '' ) },
+				el( 'div', { class: 'ss-kpi' },
+					el( 'span', { class: 'ss-kpi__icon' + ( tone ? ' ss-kpi__icon--' + tone : '' ) }, ico( icon ) ),
+					el( 'span', { class: 'ss-kpi__label' }, labelWithTip( label, help ) ),
+					el( 'span', { class: 'ss-kpi__valrow' }, value, change ),
+					el( 'span', { class: 'ss-kpi__meta' }, meta )
+				)
+			);
+		};
 		const paid = +t.paid_orders || 0;
 		const skipped = +t.skipped || 0;
 		const skipOff = !! S.saved && ! S.saved.allow_skip && ! skipped;
@@ -1500,19 +1546,19 @@
 			tip( __( 'Skipped', 'sourcesay' ), __( 'Customers who pressed the skip button (for example “Prefer not to say”). Skips do not count as answers, so they never change your channel numbers or the response rate.', 'sourcesay' ) )
 		);
 		return [
-			tile( 'responses', '', __( 'Answers', 'sourcesay' ), fmtNum( t.responses ),
+			tile( 'responses', '', __( 'Answers', 'sourcesay' ), t.responses, fmtNum,
 				delta( t.responses, p.responses, { focusable: true } ),
 				sprintf( /* translators: %s: number of paid orders */ _n( 'From %s paid order', 'From %s paid orders', paid, 'sourcesay' ), fmtNum( paid ) ),
 				__( 'How many customers picked an answer. Skips and test orders are not counted.', 'sourcesay' ) ),
-			tile( 'percent', 'purple', __( 'Response rate', 'sourcesay' ), fmtPct( t.response_rate, 1 ),
+			tile( 'percent', 'cream', __( 'Response rate', 'sourcesay' ), t.response_rate, ( v ) => fmtPct( v, 1 ),
 				delta( t.response_rate, p.response_rate, { pts: true, base: p.paid_orders, focusable: true, prevText: fmtPct( p.response_rate, 1 ) } ),
 				skipMeta,
 				__( 'Out of every paid order in this date range, the share whose customer answered the question. 30% means 3 in 10 customers answered. The change is shown in percentage points (pts).', 'sourcesay' ) ),
-			tile( 'revenue', 'green', __( 'Revenue from answered orders', 'sourcesay' ), fmtMoney( t.revenue ),
+			tile( 'revenue', 'green', __( 'Revenue from answered orders', 'sourcesay' ), t.revenue, fmtMoney,
 				delta( t.revenue, p.revenue, { focusable: true, prevText: fmtMoney( p.revenue ) } ),
 				__( 'Paid orders, minus refunds', 'sourcesay' ),
 				__( 'The total spent on orders whose customer answered, after refunds. Orders without an answer are not included.', 'sourcesay' ) ),
-			tile( 'receipt', 'orange', __( 'Average order value', 'sourcesay' ), fmtMoney( t.aov ),
+			tile( 'receipt', 'orange', __( 'Average order value', 'sourcesay' ), t.aov, fmtMoney,
 				delta( t.aov, p.aov, { focusable: true, prevText: fmtMoney( p.aov ) } ),
 				__( 'Across answered orders', 'sourcesay' ),
 				__( 'Revenue from answered orders divided by the number of those orders: what one of these customers spends per order.', 'sourcesay' ) ),
@@ -1528,9 +1574,82 @@
 		return { label: o ? o.label : id, icon: o ? o.icon : 'question' };
 	}
 
+	/**
+	 * Where answers come from: one 100% bar, one colour per channel, legend with the shares.
+	 * Up to 8 channels get their own colour; from the 9th on the smallest fold into one grey "more" block.
+	 */
+	/** Channel key => colour (same rule as the share bar), so a channel looks the same in every chart and icon. */
+	function chanColors( chans ) {
+		const ranked = chans.filter( ( c ) => +c.responses > 0 ).sort( ( a, b ) => ( b.responses - a.responses ) || ( b.revenue - a.revenue ) );
+		const keep = ranked.length > 8 ? 7 : 8;
+		return new Map( ranked.map( ( c, i ) => [ c.answer_id || c.label, i < keep ? 'var(--ss-cat-' + ( i + 1 ) + ')' : 'var(--ss-cat-rest)' ] ) );
+	}
+
+	function shareBar( chans ) {
+		const total = chans.reduce( ( a, c ) => a + ( +c.responses || 0 ), 0 );
+		if ( ! total ) {
+			return null;
+		}
+		// ponytail: colour slot = answer rank in this range, so a channel can change colour between ranges; pin slots to survey order if owners compare ranges side by side.
+		const ranked = chans.filter( ( c ) => +c.responses > 0 ).sort( ( a, b ) => ( b.responses - a.responses ) || ( b.revenue - a.revenue ) );
+		const keep = ranked.length > 8 ? 7 : 8;
+		const parts = ranked.slice( 0, keep ).map( ( c, i ) => ( { label: c.label, n: +c.responses, rev: +c.revenue || 0, color: 'var(--ss-cat-' + ( i + 1 ) + ')' } ) );
+		const rest = ranked.slice( keep );
+		if ( rest.length ) {
+			parts.push( {
+				label: sprintf( /* translators: %d: number of smaller channels grouped together */ _n( '%d more channel', '%d more channels', rest.length, 'sourcesay' ), rest.length ),
+				n: rest.reduce( ( a, c ) => a + ( +c.responses || 0 ), 0 ),
+				rev: rest.reduce( ( a, c ) => a + ( +c.revenue || 0 ), 0 ),
+				color: 'var(--ss-cat-rest)',
+			} );
+		}
+		const wrap = el( 'div', { class: 'ss-share' } );
+		const tip = el( 'div', { class: 'ss-share__tip', hidden: true, 'aria-hidden': 'true' } );
+		const segs = parts.map( ( p, i ) => el( 'span', { class: 'ss-share__seg', style: '--ss-c:' + p.color + ';--ss-i:' + i + ';flex:' + p.n + ' 1 0' } ) );
+		const items = parts.map( ( p ) => el( 'li', { class: 'ss-share__item', style: '--ss-c:' + p.color },
+			el( 'span', { class: 'ss-swatch', 'aria-hidden': 'true' } ),
+			el( 'span', { text: p.label } ),
+			el( 'strong', { text: fmtPct( p.n / total ) } )
+		) );
+		const focus = ( i ) => {
+			wrap.classList.toggle( 'is-hovering', i >= 0 );
+			segs.forEach( ( s, j ) => s.classList.toggle( 'is-active', j === i ) );
+			items.forEach( ( s, j ) => s.classList.toggle( 'is-active', j === i ) );
+			if ( i < 0 ) {
+				tip.hidden = true;
+				return;
+			}
+			const p = parts[ i ];
+			tip.textContent = '';
+			add( tip, [
+				el( 'strong', { text: p.label } ),
+				el( 'span', { style: 'display:block', text: sprintf( /* translators: 1: number of answers, 2: share of all answers */ _n( '%1$s answer (%2$s)', '%1$s answers (%2$s)', p.n, 'sourcesay' ), fmtNum( p.n ), fmtPct( p.n / total ) ) } ),
+				el( 'span', { style: 'display:block', text: sprintf( /* translators: %s: revenue amount */ __( '%s revenue', 'sourcesay' ), fmtMoney( p.rev ) ) } ),
+			] );
+			tip.hidden = false;
+			const s = segs[ i ];
+			const half = tip.offsetWidth / 2;
+			tip.style.left = Math.min( Math.max( s.offsetLeft + s.offsetWidth / 2, half ), wrap.clientWidth - half ) + 'px';
+			tip.style.top = s.offsetTop + 'px';
+		};
+		segs.forEach( ( s, i ) => s.addEventListener( 'pointerenter', () => focus( i ) ) );
+		items.forEach( ( s, i ) => s.addEventListener( 'pointerenter', () => focus( i ) ) );
+		wrap.addEventListener( 'pointerleave', () => focus( -1 ) );
+		return add( wrap, [
+			el( 'div', { class: 'ss-share__head' },
+				el( 'span', { class: 'ss-share__title', text: __( 'Where answers come from', 'sourcesay' ) } ),
+				el( 'span', { class: 'ss-share__note', text: sprintf( /* translators: %s: number of answers */ _n( 'Share of %s answer', 'Share of %s answers', total, 'sourcesay' ), fmtNum( total ) ) } )
+			),
+			el( 'div', { class: 'ss-share__bar', 'aria-hidden': 'true' }, segs ),
+			el( 'ul', { class: 'ss-share__list', 'aria-label': __( 'Share of answers by channel', 'sourcesay' ) }, items ),
+			tip,
+		] );
+	}
+
 	function channelsCard( rep ) {
 		const chans = rep.channels || [];
 		const maxShare = Math.max( 0.0001, ...chans.map( ( c ) => Math.max( +c.share_responses || 0, +c.share_revenue || 0 ) ) );
+		const colors = chanColors( chans );
 
 		const legend = el( 'div', { class: 'ss-legend', 'aria-hidden': 'true' },
 			el( 'span', { class: 'ss-legend__item' }, el( 'span', { class: 'ss-swatch ss-swatch--responses' } ), __( 'Share of answers', 'sourcesay' ) ),
@@ -1563,7 +1682,7 @@
 				el( 'td', { class: 'ss-col-chan' },
 					el( 'span', { class: 'ss-chan' },
 						el( 'span', { class: 'ss-chan__rank', 'aria-hidden': 'true', text: String( i + 1 ) } ),
-						el( 'span', { class: 'ss-chan__icon' }, ico( c.icon || ( c.answer_id === 'other' ? 'question' : 'tag' ) ) ),
+						el( 'span', colors.has( c.answer_id || c.label ) ? { class: 'ss-chan__icon ss-chan__icon--cat', style: '--ss-c:' + colors.get( c.answer_id || c.label ) } : { class: 'ss-chan__icon' }, ico( c.icon || ( c.answer_id === 'other' ? 'question' : 'tag' ) ) ),
 						el( 'span', { text: c.label } )
 					)
 				),
@@ -1581,8 +1700,9 @@
 			);
 		} );
 
-		return card( { title: __( 'Channels', 'sourcesay' ), desc: __( 'Ranked by revenue. A revenue bar longer than its answers bar means that channel brings bigger orders.', 'sourcesay' ), actions: legend },
+		return card( { icon: 'chart', title: __( 'Channels', 'sourcesay' ), desc: __( 'Ranked by revenue. A revenue bar longer than its answers bar means that channel brings bigger orders.', 'sourcesay' ), actions: legend },
 			insightsBlock( rep ),
+			shareBar( chans ),
 			el( 'div', { class: 'ss-table-wrap' },
 				el( 'table', { class: 'ss-table ss-chan-table' },
 					el( 'caption', { class: 'ss-sr', text: __( 'Answers and revenue by channel', 'sourcesay' ) } ),
@@ -1591,7 +1711,7 @@
 						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.resp, __( 'How many customers picked this channel.', 'sourcesay' ) + changeNote ) ),
 						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.rev, __( 'Total spent by these customers on the orders where they answered, after refunds.', 'sourcesay' ) + changeNote ) ),
 						el( 'th', { scope: 'col', class: 'is-num' }, labelWithTip( L.aov, __( 'What a customer from this channel spends per order, on average.', 'sourcesay' ) ) ),
-						el( 'th', { scope: 'col', class: 'ss-col-bars' }, labelWithTip( L.bars, __( 'Light bar: this channel’s share of all answers. Dark bar: its share of all revenue from answered orders. A longer dark bar means bigger spenders.', 'sourcesay' ) ) ),
+						el( 'th', { scope: 'col', class: 'ss-col-bars' }, labelWithTip( L.bars, __( 'Top bar (blue): this channel’s share of all answers. Bottom bar (green): its share of all revenue from answered orders. A longer green bar means bigger spenders.', 'sourcesay' ) ) ),
 						el( 'th', { scope: 'col' }, labelWithTip( L.gap, __( 'Share of revenue minus share of answers, in percentage points. +5 pts means this channel brings 5 points more of your revenue than of your answers.', 'sourcesay' ) ) )
 					) ),
 					el( 'tbody', null, rows )
@@ -1867,7 +1987,7 @@
 				item( __( 'Compared with tracking.', 'sourcesay' ), __( 'The CSV export also has the source WooCommerce tracked for each order, so you can compare what customers say with what links and cookies saw.', 'sourcesay' ) ),
 				item( __( 'Test orders.', 'sourcesay' ), __( 'Orders created with “Place a test order” are never counted here or in the export.', 'sourcesay' ) )
 			),
-		] );
+		], false, 'lightbulb', 'yellow' );
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -2121,7 +2241,7 @@
 					),
 					foot( back( 1 ), next )
 				) ),
-				el( 'div', { class: 'ss-builder__side' }, card( { title: __( 'Preview', 'sourcesay' ), desc: __( 'Click an answer to try it.', 'sourcesay' ) }, R.preview ) )
+				el( 'div', { class: 'ss-builder__side' }, card( { icon: 'eye', tone: 'cream', title: __( 'Preview', 'sourcesay' ), desc: __( 'Click an answer to try it.', 'sourcesay' ) }, R.preview ) )
 			) );
 			renderPreview();
 			updateErrors();
@@ -2296,30 +2416,31 @@
 			el( 'p', { class: 'ss-field__help', text: __( 'Export from Reports. Test orders are left out, and cells that start with = + - @ are escaped so spreadsheets do not run them as formulas.', 'sourcesay' ) } ),
 			csv,
 			applyHook( 'sourcesay.developer.items', [], { ui: UI, restBase: base } ),
-		] ) );
+		], false, 'gear', 'dev' ) );
 	}
 
-	function niceMax( v, integer ) {
+	/** Round axis: a clean step (1, 2, 2.5, 5 x 10^n) and a max that is a whole number of steps, from zero. */
+	function niceScale( v, integer ) {
 		if ( v <= 0 ) {
-			return integer ? 4 : 100;
+			return integer ? { max: 4, step: 1 } : { max: 100, step: 25 };
 		}
-		const p = Math.pow( 10, Math.floor( Math.log10( v ) ) );
-		const m = v / p;
-		let n = 10;
+		const raw = v / 4;
+		const p = Math.pow( 10, Math.floor( Math.log10( raw ) ) );
+		const m = raw / p;
+		let step = p * 10;
 		if ( m <= 1 ) {
-			n = 1;
+			step = p;
 		} else if ( m <= 2 ) {
-			n = 2;
+			step = p * 2;
 		} else if ( m <= 2.5 ) {
-			n = 2.5;
+			step = p * 2.5;
 		} else if ( m <= 5 ) {
-			n = 5;
+			step = p * 5;
 		}
-		let max = n * p;
 		if ( integer ) {
-			max = Math.max( 4, Math.ceil( max / 4 ) * 4 );
+			step = Math.max( 1, Math.ceil( step ) );
 		}
-		return max;
+		return { max: Math.ceil( v / step - 1e-9 ) * step, step };
 	}
 
 	function trendCard( rep ) {
@@ -2328,63 +2449,94 @@
 		const metricSeg = seg( __( 'Chart metric', 'sourcesay' ), [ [ 'responses', __( 'Answers', 'sourcesay' ) ], [ 'revenue', __( 'Revenue', 'sourcesay' ) ] ], S.chartMetric, ( m ) => {
 			S.chartMetric = m;
 			metricSeg.querySelectorAll( 'button' ).forEach( ( b, i ) => b.setAttribute( 'aria-pressed', String( ( i === 0 ? 'responses' : 'revenue' ) === m ) ) );
-			drawChart( box, rows );
+			drawChart( box, rows, true );
 		}, true );
 		const table = el( 'table', { class: 'ss-sr' },
 			el( 'caption', { text: __( 'Answers and revenue per day', 'sourcesay' ) } ),
 			el( 'thead', null, el( 'tr', null, el( 'th', { scope: 'col', text: __( 'Date', 'sourcesay' ) } ), el( 'th', { scope: 'col', text: __( 'Answers', 'sourcesay' ) } ), el( 'th', { scope: 'col', text: __( 'Revenue', 'sourcesay' ) } ) ) ),
 			el( 'tbody', null, rows.map( ( r ) => el( 'tr', null, el( 'th', { scope: 'row', text: fmtDay( r.date, true ) } ), el( 'td', { text: fmtNum( r.responses ) } ), el( 'td', { text: fmtMoney( r.revenue ) } ) ) ) )
 		);
-		const c = card( { title: __( 'Daily trend', 'sourcesay' ), desc: __( 'Answers or revenue from answered orders, per day.', 'sourcesay' ), actions: metricSeg }, box, table );
-		requestAnimationFrame( () => drawChart( box, rows ) );
+		const c = card( { icon: 'calendar', tone: 'green', title: __( 'Daily trend', 'sourcesay' ), desc: __( 'Answers or revenue from answered orders, per day.', 'sourcesay' ), actions: metricSeg }, box, table );
+		requestAnimationFrame( () => drawChart( box, rows, true ) );
 		if ( window.ResizeObserver ) {
 			let w = 0;
 			new ResizeObserver( () => {
 				if ( box.clientWidth && Math.abs( box.clientWidth - w ) > 4 ) {
+					const first = ! w;
 					w = box.clientWidth;
-					drawChart( box, rows );
+					if ( ! first ) {
+						drawChart( box, rows, false );
+					}
 				}
 			} ).observe( box );
 		}
 		return c;
 	}
 
-	function drawChart( box, rows ) {
+	/** Column with a 4px rounded data end and a square foot on the baseline. */
+	function barPath( x, y, w, h ) {
+		const r = Math.min( 4, w / 2, h );
+		return 'M' + x + ',' + ( y + h ) + 'V' + ( y + r ) + 'Q' + x + ',' + y + ' ' + ( x + r ) + ',' + y + 'H' + ( x + w - r ) + 'Q' + ( x + w ) + ',' + y + ' ' + ( x + w ) + ',' + ( y + r ) + 'V' + ( y + h ) + 'Z';
+	}
+
+	function drawChart( box, rows, animate ) {
 		box.textContent = '';
+		box.classList.toggle( 'is-static', ! animate );
 		const metric = S.chartMetric;
+		const isRev = metric === 'revenue';
 		const W = Math.max( 260, box.clientWidth || 640 );
-		const H = 240;
-		const L = metric === 'revenue' ? 52 : 36;
-		const Rp = 8;
-		const T = 12;
-		const B = 28;
+		const H = 260;
+		const n = Math.max( 1, rows.length );
+		const vals = rows.map( ( r ) => Math.max( 0, +r[ metric ] || 0 ) );
+		const peak = Math.max( 0, ...vals );
+		const scale = niceScale( peak, ! isRev );
+		const max = scale.max;
+		const fmt = isRev ? fmtMoneyShort : fmtNum;
+		const ticks = [];
+		for ( let v = 0; v <= max + 1e-9; v += scale.step ) {
+			ticks.push( v );
+		}
+		const L = 10 + Math.max( ...ticks.map( ( v ) => fmt( v ).length ) ) * 6.6;
+		const Rp = 4;
+		const T = 24;
+		const B = 30;
 		const iw = W - L - Rp;
 		const ih = H - T - B;
-		const n = Math.max( 1, rows.length );
-		const vals = rows.map( ( r ) => +r[ metric ] || 0 );
-		const max = niceMax( Math.max( 0, ...vals ), metric === 'responses' );
-		const fmt = metric === 'revenue' ? fmtMoneyShort : fmtNum;
 		const titleId = uid( 'ct' );
 		const descId = uid( 'cd' );
 		const total = vals.reduce( ( a, v ) => a + v, 0 );
+		const y0 = T + ih;
 		const svg = svgEl( 'svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', tabindex: '0', 'aria-labelledby': titleId + ' ' + descId } );
-		svg.appendChild( svgEl( 'title', { id: titleId }, metric === 'revenue' ? __( 'Revenue per day', 'sourcesay' ) : __( 'Answers per day', 'sourcesay' ) ) );
-		svg.appendChild( svgEl( 'desc', { id: descId }, sprintf( /* translators: 1: total, 2: number of days. */ __( '%1$s in total over %2$s days. Use the left and right arrow keys to read each day. The same data is in the table below the chart.', 'sourcesay' ), metric === 'revenue' ? fmtMoney( total ) : fmtNum( total ), String( rows.length ) ) ) );
-		[ 0, 0.5, 1 ].forEach( ( f ) => {
-			const y = T + ih - f * ih;
-			svg.appendChild( svgEl( 'line', { class: 'ss-chart__grid', x1: L, x2: W - Rp, y1: y, y2: y } ) );
-			svg.appendChild( svgEl( 'text', { class: 'ss-chart__axis', x: L - 8, y: y + 4, 'text-anchor': 'end' }, fmt( max * f ) ) );
+		svg.appendChild( svgEl( 'title', { id: titleId }, isRev ? __( 'Revenue per day', 'sourcesay' ) : __( 'Answers per day', 'sourcesay' ) ) );
+		svg.appendChild( svgEl( 'desc', { id: descId }, sprintf( /* translators: 1: total, 2: number of days. */ __( '%1$s in total over %2$s days. Use the left and right arrow keys to read each day. The same data is in the table below the chart.', 'sourcesay' ), isRev ? fmtMoney( total ) : fmtNum( total ), String( rows.length ) ) ) );
+		ticks.forEach( ( v ) => {
+			const y = Math.round( y0 - ( v / max ) * ih ) + 0.5;
+			if ( v > 0 ) {
+				svg.appendChild( svgEl( 'line', { class: 'ss-chart__grid', x1: L, x2: W - Rp, y1: y, y2: y } ) );
+			}
+			svg.appendChild( svgEl( 'text', { class: 'ss-chart__axis', x: L - 10, y: y + 4, 'text-anchor': 'end' }, fmt( v ) ) );
 		} );
 		const step = iw / n;
-		const bw = Math.max( 2, Math.min( 28, step * 0.62 ) );
-		const bars = rows.map( ( r, i ) => {
-			const v = +r[ metric ] || 0;
+		const bw = Math.max( 2, Math.min( 24, step * 0.64 ) );
+		const band = svgEl( 'rect', { class: 'ss-chart__band', x: 0, y: T - 8, width: Math.max( bw + 8, step - 2 ), height: ih + 8, rx: 6 } );
+		svg.appendChild( band );
+		const bars = vals.map( ( v, i ) => {
 			const h = v > 0 ? Math.max( 2, ( v / max ) * ih ) : 0;
-			const rect = svgEl( 'rect', { class: 'ss-chart__bar' + ( metric === 'revenue' ? ' ss-chart__bar--revenue' : '' ), x: L + i * step + ( step - bw ) / 2, y: T + ih - h, width: bw, height: h, rx: Math.min( 4, bw / 2 ) } );
-			svg.appendChild( rect );
-			return rect;
+			const p = svgEl( 'path', { class: 'ss-chart__bar' + ( isRev ? ' ss-chart__bar--revenue' : '' ), d: h ? barPath( L + i * step + ( step - bw ) / 2, y0 - h, bw, h ) : '', style: '--ss-i:' + Math.min( i, 60 ) } );
+			p.dataset.top = y0 - h;
+			svg.appendChild( p );
+			return p;
 		} );
-		const labels = Math.min( n, Math.max( 2, Math.floor( iw / 72 ) ) );
+		svg.appendChild( svgEl( 'line', { class: 'ss-chart__base', x1: L, x2: W - Rp, y1: y0 + 0.5, y2: y0 + 0.5 } ) );
+		const peakAt = vals.indexOf( peak );
+		if ( peak > 0 ) {
+			// One direct label: the best day. Every other value is on the axis, in the tooltip and in the table.
+			const px = Math.min( Math.max( L + peakAt * step + step / 2, L + 18 ), W - Rp - 18 );
+			svg.appendChild( svgEl( 'text', { class: 'ss-chart__peak', x: px, y: +bars[ peakAt ].dataset.top - 7, 'text-anchor': 'middle' }, fmt( peak ) ) );
+		} else {
+			svg.appendChild( svgEl( 'text', { class: 'ss-chart__empty', x: L + iw / 2, y: T + ih / 2, 'text-anchor': 'middle' }, isRev ? __( 'No revenue from answered orders in this range yet.', 'sourcesay' ) : __( 'No answers in this range yet.', 'sourcesay' ) ) );
+		}
+		const labels = n === 1 ? 1 : Math.min( n, Math.max( 2, Math.floor( iw / 72 ) ) );
 		const seen = new Set();
 		for ( let k = 0; k < labels; k++ ) {
 			const i = labels === 1 ? 0 : Math.round( ( k * ( n - 1 ) ) / ( labels - 1 ) );
@@ -2392,8 +2544,16 @@
 				continue;
 			}
 			seen.add( i );
-			const anchor = k === 0 ? 'start' : ( k === labels - 1 ? 'end' : 'middle' );
-			const x = k === 0 ? L : ( k === labels - 1 ? W - Rp : L + i * step + step / 2 );
+			const cx = L + i * step + step / 2;
+			let anchor = 'middle';
+			let x = cx;
+			if ( labels > 1 && k === 0 && cx - 24 < L ) {
+				anchor = 'start';
+				x = L + i * step + ( step - bw ) / 2;
+			} else if ( labels > 1 && k === labels - 1 && cx + 24 > W - Rp ) {
+				anchor = 'end';
+				x = L + i * step + ( step + bw ) / 2;
+			}
 			svg.appendChild( svgEl( 'text', { class: 'ss-chart__axis', x, y: H - 8, 'text-anchor': anchor }, fmtDay( rows[ i ].date ) ) );
 		}
 		box.appendChild( svg );
@@ -2408,29 +2568,38 @@
 			active = i;
 			if ( i < 0 || ! rows[ i ] ) {
 				tip.hidden = true;
+				band.classList.remove( 'is-active' );
 				return;
 			}
 			bars[ i ].classList.add( 'is-active' );
+			band.setAttribute( 'x', L + i * step + ( step - +band.getAttribute( 'width' ) ) / 2 );
+			band.classList.add( 'is-active' );
 			const r = rows[ i ];
 			tip.textContent = '';
-			add( tip, [ el( 'strong', { text: fmtDay( r.date, true ) } ), sprintf( /* translators: %s: number of answers */ _n( '%s answer', '%s answers', +r.responses || 0, 'sourcesay' ), fmtNum( r.responses ) ) + ', ' + fmtMoney( r.revenue ) ] );
+			add( tip, [
+				el( 'strong', { text: fmtDay( r.date, true ) } ),
+				el( 'span', { class: 'ss-chart__tip-row' }, el( 'span', { class: 'ss-swatch ss-swatch--responses' } ), sprintf( /* translators: %s: number of answers */ _n( '%s answer', '%s answers', +r.responses || 0, 'sourcesay' ), fmtNum( r.responses ) ) ),
+				el( 'span', { class: 'ss-chart__tip-row' }, el( 'span', { class: 'ss-swatch' } ), sprintf( /* translators: %s: revenue amount */ __( '%s revenue', 'sourcesay' ), fmtMoney( r.revenue ) ) ),
+			] );
 			tip.hidden = false;
-			const scale = box.clientWidth / W;
-			const cx = ( L + i * step + step / 2 ) * scale;
-			const h = +bars[ i ].getAttribute( 'height' );
-			tip.style.left = Math.min( Math.max( cx, 70 ), box.clientWidth - 70 ) + 'px';
-			tip.style.top = ( ( T + ih - h ) * scale ) + 'px';
+			const k = box.clientWidth / W;
+			const half = tip.offsetWidth / 2;
+			const cx = ( L + i * step + step / 2 ) * k;
+			tip.style.left = Math.min( Math.max( cx, half ), box.clientWidth - half ) + 'px';
+			tip.style.top = ( ( Math.min( +bars[ i ].dataset.top, y0 ) - ( i === peakAt ? 16 : 0 ) ) * k ) + 'px';
 			announce( tip.textContent );
 		};
-		svg.addEventListener( 'mousemove', ( e ) => {
+		const fromPointer = ( e ) => {
 			const rect = svg.getBoundingClientRect();
 			const x = ( ( e.clientX - rect.left ) / rect.width ) * W;
 			const i = Math.floor( ( x - L ) / step );
 			if ( i !== active ) {
 				show( i >= 0 && i < n ? i : -1 );
 			}
-		} );
-		svg.addEventListener( 'mouseleave', () => show( -1 ) );
+		};
+		svg.addEventListener( 'pointermove', fromPointer );
+		svg.addEventListener( 'pointerdown', fromPointer );
+		svg.addEventListener( 'pointerleave', () => show( -1 ) );
 		svg.addEventListener( 'blur', () => show( -1 ) );
 		svg.addEventListener( 'keydown', ( e ) => {
 			let i = active;
@@ -2442,6 +2611,8 @@
 				i = 0;
 			} else if ( e.key === 'End' ) {
 				i = n - 1;
+			} else if ( e.key === 'Escape' ) {
+				i = -1;
 			} else {
 				return;
 			}
@@ -2463,7 +2634,7 @@
 			),
 			el( 'span', { class: 'ss-split-row__value' }, fmtPct( count / all ), el( 'small', { text: sprintf( /* translators: %s: number of answers */ _n( '%s answer', '%s answers', count, 'sourcesay' ), fmtNum( count ) ) } ) )
 		);
-		return card( { title: __( 'New vs returning', 'sourcesay' ), desc: __( 'Returning means the customer had paid for an earlier order.', 'sourcesay' ) },
+		return card( { icon: 'user-plus', tone: 'green', title: __( 'New vs returning', 'sourcesay' ), desc: __( 'Returning means the customer had paid for an earlier order.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-split', role: 'img', 'aria-label': sprintf( /* translators: 1: share new, 2: share returning */ __( 'New customers %1$s, returning customers %2$s of answers', 'sourcesay' ), fmtPct( nw / all ), fmtPct( rt / all ) ) },
 				el( 'span', { class: 'ss-split__part', style: 'width:' + ( ( nw / all ) * 100 ).toFixed( 1 ) + '%' } ),
 				el( 'span', { class: 'ss-split__part ss-split__part--ret', style: 'width:' + ( ( rt / all ) * 100 ).toFixed( 1 ) + '%' } )
@@ -2484,8 +2655,8 @@
 			const max = Math.max( 1, ...list.map( ( a ) => +a.count || 0 ) );
 			return el( 'div', { class: 'ss-told__group' },
 				el( 'h4', { class: 'ss-card__sub' }, el( 'span', { class: 'ss-chan__icon' }, ico( ch.icon || 'tag' ) ), ch.label ),
-				el( 'ul', { class: 'ss-answers' }, list.map( ( a ) => el( 'li', { class: 'ss-answer' },
-					el( 'span', { class: 'ss-answer__bar', style: 'width:' + ( ( a.count / max ) * 100 ).toFixed( 1 ) + '%' } ),
+				el( 'ul', { class: 'ss-answers' }, list.map( ( a, i ) => el( 'li', { class: 'ss-answer' },
+					el( 'span', { class: 'ss-answer__bar', style: 'width:' + ( ( a.count / max ) * 100 ).toFixed( 1 ) + '%;--ss-i:' + i } ),
 					el( 'span', { class: 'ss-answer__text', text: a.text } ),
 					el( 'span', { class: 'ss-answer__count', text: fmtNum( a.count ) } )
 				) ) )
@@ -2499,7 +2670,7 @@
 			el( 'span', { class: 'ss-quote__text', text: o.text } ),
 			el( 'span', { class: 'ss-quote__date', text: fmtDay( o.date ) } )
 		) ) ) : el( 'div', { class: 'ss-empty ss-empty--compact' }, el( 'p', { class: 'ss-empty__text', text: __( 'No “Other” answers in this range.', 'sourcesay' ) } ) );
-		return card( { title: __( 'What they told us', 'sourcesay' ), desc: __( 'Top follow-up answers per channel and the latest “Other” replies, in the customers’ own words.', 'sourcesay' ) },
+		return card( { icon: 'chat', tone: 'orange', title: __( 'What they told us', 'sourcesay' ), desc: __( 'Top follow-up answers per channel and the latest “Other” replies, in the customers’ own words.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-told' },
 				el( 'div', null, el( 'h3', { class: 'ss-card__sub', text: __( 'Follow-up answers', 'sourcesay' ) } ), left ),
 				el( 'div', null, el( 'h3', { class: 'ss-card__sub', text: __( 'Latest “Other” answers', 'sourcesay' ) } ), right )
@@ -2683,7 +2854,7 @@
 			)
 		);
 
-		const qCard = card( { title: __( 'Question', 'sourcesay' ) },
+		const qCard = card( { icon: 'chat', title: __( 'Question', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				toggle( { label: __( 'Show the survey to customers after checkout', 'sourcesay' ), help: __( 'On: customers see it on the order confirmation page and can skip it. Off: only test orders show it.', 'sourcesay' ), checked: d.enabled, onChange: ( v ) => {
 					d.enabled = v;
@@ -2707,7 +2878,7 @@
 		R.opts = el( 'ul', { class: 'ss-opts', 'aria-label': __( 'Answers', 'sourcesay' ) } );
 		R.addBtn = el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary', on: { click: addOption } }, ico( 'plus' ), __( 'Add answer', 'sourcesay' ) );
 		R.optCount = el( 'span', { class: 'ss-field__help' } );
-		const optsCard = card( { title: __( 'Answers', 'sourcesay' ), desc: __( 'Drag the handle or use the arrow buttons to reorder. Turn an answer off to hide it without deleting it.', 'sourcesay' ) },
+		const optsCard = card( { icon: 'list', tone: 'green', title: __( 'Answers', 'sourcesay' ), desc: __( 'Drag the handle or use the arrow buttons to reorder. Turn an answer off to hide it without deleting it.', 'sourcesay' ) },
 			R.opts,
 			errBox( 'options' ),
 			el( 'div', { class: 'ss-opts__foot' }, R.addBtn, R.optCount )
@@ -2723,7 +2894,7 @@
 				changed();
 			} } )
 		);
-		const otherCard = card( { title: __( 'Other answer', 'sourcesay' ) },
+		const otherCard = card( { icon: 'question', tone: 'orange', title: __( 'Other answer', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				toggle( { label: __( 'Offer an “Other” answer with a text box', 'sourcesay' ), help: __( 'Always shown last, so customers can name a channel you did not list.', 'sourcesay' ), checked: d.other.enabled, onChange: ( v ) => {
 					d.other.enabled = v;
@@ -2783,7 +2954,7 @@
 		const pills = [ 46, 30, 52, 38, 34 ].map( ( w ) => el( 'i', { style: 'width:' + w + 'px' } ) );
 		const lines = [ 1, 2, 3 ].map( () => el( 'i' ) );
 
-		const lookCard = card( { title: __( 'Look and messages', 'sourcesay' ) },
+		const lookCard = card( { icon: 'palette', tone: 'yellow', title: __( 'Look and messages', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				toggle( { label: __( 'Shuffle the answers for each order', 'sourcesay' ), help: __( 'Prevents the first answer from being picked more often just because it is first. “Other” stays last.', 'sourcesay' ), checked: d.shuffle, onChange: ( v ) => {
 					d.shuffle = v;
@@ -2814,7 +2985,7 @@
 			widthSeg.querySelectorAll( 'button' ).forEach( ( b, i ) => b.setAttribute( 'aria-pressed', String( ( i === 1 ) === m ) ) );
 			renderPreview();
 		}, true );
-		const previewCard = card( { title: __( 'Preview', 'sourcesay' ), desc: __( 'Try it: click an answer. Your theme sets the final font and colours.', 'sourcesay' ), actions: widthSeg }, R.preview );
+		const previewCard = card( { icon: 'eye', tone: 'cream', title: __( 'Preview', 'sourcesay' ), desc: __( 'Try it: click an answer. Your theme sets the final font and colours.', 'sourcesay' ), actions: widthSeg }, R.preview );
 
 		R.i18nNote = el( 'div', { class: 'ss-i18n-slot' } );
 		fillI18nNote();
@@ -2878,7 +3049,7 @@
 			el( 'p', { class: 'ss-field__help ss-builders__text', text: __( 'Open your custom thank-you page in its editor and add the SourceSay survey block, or paste [sourcesay] into a Shortcode element (Elementor, Bricks) or a text block (FunnelKit, CartFlows).', 'sourcesay' ) } ),
 			el( 'p', { class: 'ss-field__help ss-builders__text', text: __( 'The survey finds the order from the page address by itself. Then choose “Only where I add the SourceSay block or shortcode” above.', 'sourcesay' ) } ),
 		] );
-		return el( 'div', { 'data-jump': 'placement', class: 'ss-jump' }, card( { title: __( 'Where the survey appears', 'sourcesay' ), desc: __( 'Most stores keep the automatic option. Pick the second one if your thank-you page is built with a page builder or funnel plugin.', 'sourcesay' ) },
+		return el( 'div', { 'data-jump': 'placement', class: 'ss-jump' }, card( { icon: 'map-pin', tone: 'cream', title: __( 'Where the survey appears', 'sourcesay' ), desc: __( 'Most stores keep the automatic option. Pick the second one if your thank-you page is built with a page builder or funnel plugin.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				el( 'fieldset', { class: 'ss-choices ss-choices--stack' },
 					el( 'legend', { class: 'ss-sr', text: __( 'Where the survey appears', 'sourcesay' ) } ),
@@ -2908,7 +3079,7 @@
 			el( 'span', { class: 'ss-choice__name', text: title } ),
 			el( 'span', { class: 'ss-field__help', text } )
 		);
-		return card( { title: __( 'Who to ask', 'sourcesay' ) },
+		return card( { icon: 'users', title: __( 'Who to ask', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				el( 'fieldset', { class: 'ss-choices' },
 					el( 'legend', { class: 'ss-sr', text: __( 'Who to ask', 'sourcesay' ) } ),
@@ -3528,13 +3699,13 @@
 		);
 
 		const left = el( 'div', { class: 'ss-stack' },
-			card( { title: __( 'My Account', 'sourcesay' ) },
+			card( { icon: 'user-plus', title: __( 'My Account', 'sourcesay' ) },
 				toggle( { label: __( 'Ask again in My Account', 'sourcesay' ), help: __( 'Customers who skipped the question can answer it on My Account > Orders > View for 30 days after ordering.', 'sourcesay' ), checked: d.show_in_account, onChange: ( v ) => {
 					d.show_in_account = v;
 					changed( { preview: false } );
 				} } )
 			),
-			card( { title: __( 'Data', 'sourcesay' ) },
+			card( { icon: 'calendar', tone: 'cream', title: __( 'Data', 'sourcesay' ) },
 				el( 'div', { class: 'ss-stack' },
 					selectField( { label: __( 'Keep answers for', 'sourcesay' ), value: ret, options: retOpts, help: __( 'Older answers are deleted once a day. Your WooCommerce orders are never touched.', 'sourcesay' ), onChange: ( v ) => {
 						d.retention_days = parseInt( v, 10 ) || 0;
@@ -3551,7 +3722,7 @@
 			)
 		);
 		const check = ( text ) => el( 'li', null, ico( 'check' ), el( 'span', { text } ) );
-		left.appendChild( card( { title: __( 'Where you see each answer', 'sourcesay' ), desc: __( 'Besides Reports, every answer also shows up where you already work.', 'sourcesay' ) },
+		left.appendChild( card( { icon: 'eye', tone: 'orange', title: __( 'Where you see each answer', 'sourcesay' ), desc: __( 'Besides Reports, every answer also shows up where you already work.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				el( 'ul', { class: 'ss-list-check' },
 					check( __( 'A private order note: “Customer said: Instagram”', 'sourcesay' ) ),
@@ -3562,7 +3733,7 @@
 				el( 'div', { class: 'ss-notice' }, ico( 'info' ), el( 'span', { text: __( 'The “New order” email goes out the moment the order is placed, before the customer sees the question, so it cannot include the answer. Check the order notes or the Orders screen instead.', 'sourcesay' ) } ) )
 			)
 		) );
-		const right = card( { title: __( 'Privacy', 'sourcesay' ), desc: __( 'Answers stay in your WordPress database. Nothing is sent to SwiftWebDev or anyone else.', 'sourcesay' ) },
+		const right = card( { icon: 'shield', tone: 'green', title: __( 'Privacy', 'sourcesay' ), desc: __( 'Answers stay in your WordPress database. Nothing is sent to SwiftWebDev or anyone else.', 'sourcesay' ) },
 			el( 'div', { class: 'ss-stack' },
 				el( 'div', null,
 					el( 'h3', { class: 'ss-card__sub', text: __( 'What is stored for each answer', 'sourcesay' ) } ),

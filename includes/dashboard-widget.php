@@ -29,6 +29,7 @@ add_action( 'wp_dashboard_setup', 'sourcesay_register_dashboard_widget' );
 function sourcesay_dashboard_assets( $hook ) {
 	if ( 'index.php' === $hook && current_user_can( 'manage_woocommerce' ) && file_exists( SOURCESAY_PATH . 'assets/css/dashboard.css' ) ) {
 		wp_enqueue_style( 'sourcesay-dashboard', SOURCESAY_URL . 'assets/css/dashboard.css', array(), sourcesay_asset_version( 'assets/css/dashboard.css' ) );
+		wp_enqueue_style( 'sourcesay-charts', SOURCESAY_URL . 'assets/css/charts.css', array( 'sourcesay-dashboard' ), sourcesay_asset_version( 'assets/css/charts.css' ) );
 	}
 }
 add_action( 'admin_enqueue_scripts', 'sourcesay_dashboard_assets' );
@@ -63,9 +64,13 @@ function sourcesay_dashboard_widget() {
 		'<strong>' . esc_html( number_format_i18n( $totals['response_rate'] * 100, 0 ) . '%' ) . '</strong>',
 		esc_html( number_format_i18n( $totals['responses'] ) )
 	);
-	echo '</p><table class="ss-widget__table"><thead><tr><th>' . esc_html__( 'Channel', 'sourcesay' ) . '</th><th>' . esc_html__( 'Answers', 'sourcesay' ) . '</th><th>' . esc_html__( 'Revenue', 'sourcesay' ) . '</th></tr></thead><tbody>';
-	foreach ( array_slice( $report['channels'], 0, 5 ) as $c ) {
-		echo '<tr><td>' . esc_html( $c['label'] ) . '</td><td>' . esc_html( number_format_i18n( $c['responses'] ) ) . '</td><td>' . wp_kses_post( wc_price( $c['revenue'] ) ) . '</td></tr>';
+	echo '</p><table class="ss-widget__table"><thead><tr><th>' . esc_html__( 'Channel', 'sourcesay' ) . '</th><th>' . esc_html__( 'Answers', 'sourcesay' ) . '</th><th><span class="ss-swatch" aria-hidden="true"></span> ' . esc_html__( 'Revenue', 'sourcesay' ) . '</th></tr></thead><tbody>';
+	$top     = array_slice( $report['channels'], 0, 5 );
+	$max_rev = max( 0.01, max( array_map( 'floatval', wp_list_pluck( $top, 'revenue' ) ) ) );
+	foreach ( $top as $c ) {
+		// Bar length: this channel's revenue against the top channel's, from zero.
+		$w = round( max( 0, (float) $c['revenue'] ) / $max_rev * 100, 1 );
+		echo '<tr><td><span class="ss-widget__chan">' . esc_html( $c['label'] ) . '</span><span class="ss-widget__track" aria-hidden="true"><span class="ss-widget__fill" style="width:' . esc_attr( $w ) . '%"></span></span></td><td>' . esc_html( number_format_i18n( $c['responses'] ) ) . '</td><td>' . wp_kses_post( wc_price( $c['revenue'] ) ) . '</td></tr>';
 	}
 	echo '</tbody></table>';
 	echo '<p class="ss-widget__more"><a href="' . esc_url( $link ) . '">' . esc_html__( 'See the full report', 'sourcesay' ) . ' &rarr;</a></p></div>';

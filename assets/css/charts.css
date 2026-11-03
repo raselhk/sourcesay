@@ -1,0 +1,494 @@
+/*
+ * SourceSay charts: trend chart, channel share bar, answers vs revenue bars,
+ * follow-up answer bars and the Dashboard widget bars.
+ *
+ * Palette built from the SwiftWebDev brand (blue, orange, green family) and checked
+ * with the dataviz validator on white: lightness band, chroma floor, colour-blind
+ * separation (worst adjacent pair dE 12.7), normal-vision floor (20.7) and 3:1 contrast all pass.
+ * Slots are assigned in this fixed order and never cycled; a 9th channel folds into "others".
+ */
+.sourcesay.ss-app,
+.sourcesay.ss-widget {
+	/* Categorical: channel identity */
+	--ss-cat-1: #4f5bff; /* blue */
+	--ss-cat-2: #e8672b; /* orange */
+	--ss-cat-3: #c2409f; /* magenta */
+	--ss-cat-4: #2e9e4c; /* green */
+	--ss-cat-5: #7a4fe0; /* violet */
+	--ss-cat-6: #b98000; /* amber */
+	--ss-cat-7: #0e8fa0; /* teal */
+	--ss-cat-8: #9a5b1e; /* brown */
+	--ss-cat-rest: #94a3b8; /* folded "others" */
+
+	/* Sequential: one hue (brand blue), light to dark. 50-200 are washes and tracks only. */
+	--ss-seq-50: #f3f4ff;
+	--ss-seq-100: #e3e6ff;
+	--ss-seq-200: #c4c8f5;
+	--ss-seq-300: #a3aafa;
+	--ss-seq-400: #7c86fc;
+	--ss-seq-500: #4f5bff;
+	--ss-seq-600: #3a44d6;
+	--ss-seq-700: #2a31a3;
+
+	/* Series: the same measure wears the same colour in every chart. */
+	--ss-series-responses: var(--ss-cat-1);
+	--ss-series-responses-strong: var(--ss-seq-600);
+	--ss-series-revenue: var(--ss-cat-4);
+	--ss-series-revenue-strong: #1f7a38;
+
+	/* Chart chrome */
+	--ss-chart-grid: #edf0f6;
+	--ss-chart-baseline: #cfd6e3;
+	--ss-chart-track: #eef1f6;
+	--ss-chart-axis: var(--ss-text-2);
+	--ss-chart-tip-bg: #172437;
+	--ss-chart-gap: #fff;
+}
+
+/* ---------- Legend ---------- */
+.ss-legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ss-space-2) var(--ss-space-4);
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-medium);
+	color: var(--ss-text-2);
+}
+
+.ss-legend__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ss-swatch {
+	flex: none;
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	background: var(--ss-series-revenue);
+}
+
+.ss-swatch--responses {
+	background: var(--ss-series-responses);
+}
+
+/* ---------- Channel share bar (where answers come from) ---------- */
+.ss-share {
+	position: relative;
+	margin: 0 0 var(--ss-space-5);
+}
+
+.ss-share__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--ss-space-1) var(--ss-space-3);
+	margin-bottom: var(--ss-space-2);
+}
+
+.ss-share__title {
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-bold);
+	color: var(--ss-text);
+}
+
+.ss-share__note {
+	font-size: var(--ss-fs-help);
+	color: var(--ss-text-2);
+}
+
+.ss-share__bar {
+	display: flex;
+	gap: 2px;
+	height: 14px;
+}
+
+.ss-share__seg {
+	flex: none;
+	min-width: 3px;
+	height: 100%;
+	border-radius: 3px;
+	background: var(--ss-c, var(--ss-cat-rest));
+	transform-origin: left center;
+	animation: ss-chart-grow-x 0.7s var(--ss-ease) both;
+	animation-delay: calc(var(--ss-i, 0) * 50ms);
+	transition: opacity var(--ss-dur) var(--ss-ease);
+}
+
+.ss-share__seg:first-child {
+	border-radius: 999px 3px 3px 999px;
+}
+
+.ss-share__seg:last-child {
+	border-radius: 3px 999px 999px 3px;
+}
+
+.ss-share__seg:only-child {
+	border-radius: 999px;
+}
+
+.ss-share__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ss-space-2) var(--ss-space-5);
+	margin: var(--ss-space-3) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ss-share__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--ss-fs-help);
+	color: var(--ss-text-2);
+	transition: opacity var(--ss-dur) var(--ss-ease);
+}
+
+.ss-share__item .ss-swatch {
+	background: var(--ss-c, var(--ss-cat-rest));
+}
+
+.ss-share__item strong {
+	font-weight: var(--ss-fw-bold);
+	color: var(--ss-text);
+	font-variant-numeric: tabular-nums;
+}
+
+.ss-share.is-hovering .ss-share__seg:not(.is-active),
+.ss-share.is-hovering .ss-share__item:not(.is-active) {
+	opacity: 0.35;
+}
+
+/* ---------- Answers vs revenue bars (channels table) ---------- */
+.ss-dual {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 44px;
+	gap: 5px var(--ss-space-2);
+	align-items: center;
+}
+
+.ss-dual__track {
+	height: 8px;
+	border-radius: 0 4px 4px 0;
+	background: var(--ss-chart-track);
+	overflow: hidden;
+}
+
+.ss-dual__fill {
+	display: block;
+	height: 100%;
+	border-radius: 0 4px 4px 0;
+	background: var(--ss-series-responses);
+	transform-origin: left center;
+	animation: ss-chart-grow-x 0.6s var(--ss-ease) both;
+}
+
+.ss-dual__fill--revenue {
+	background: var(--ss-series-revenue);
+}
+
+.ss-dual__pct {
+	font-size: var(--ss-fs-help);
+	font-weight: var(--ss-fw-semibold);
+	color: var(--ss-text-2);
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.ss-dual__pct--revenue {
+	color: var(--ss-text);
+}
+
+/* ---------- Trend chart ---------- */
+.ss-chart {
+	position: relative;
+	width: 100%;
+}
+
+.ss-chart svg {
+	display: block;
+	width: 100%;
+	height: 260px;
+	overflow: visible;
+	font-family: var(--ss-font);
+}
+
+.ss-chart svg:focus {
+	outline: none;
+}
+
+.ss-chart svg:focus-visible {
+	outline: 2px solid var(--ss-primary);
+	outline-offset: 4px;
+	border-radius: 4px;
+}
+
+.ss-chart__grid {
+	stroke: var(--ss-chart-grid);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.ss-chart__base {
+	stroke: var(--ss-chart-baseline);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.ss-chart__axis {
+	fill: var(--ss-chart-axis);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+
+.ss-chart__peak {
+	fill: var(--ss-text);
+	font-size: 11px;
+	font-weight: var(--ss-fw-bold);
+	font-variant-numeric: tabular-nums;
+	animation: ss-chart-fade 0.4s var(--ss-ease) 0.5s both;
+}
+
+.ss-chart__empty {
+	fill: var(--ss-text-2);
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-medium);
+}
+
+.ss-chart__band {
+	fill: var(--ss-seq-50);
+	opacity: 0;
+	transition: opacity var(--ss-dur-fast) var(--ss-ease);
+}
+
+.ss-chart__band.is-active {
+	opacity: 1;
+}
+
+.ss-chart__bar {
+	fill: var(--ss-series-responses);
+	transform-box: fill-box;
+	transform-origin: center bottom;
+	animation: ss-chart-grow-y 0.7s var(--ss-ease) both;
+	animation-delay: calc(var(--ss-i, 0) * 14ms);
+	transition: fill var(--ss-dur-fast) var(--ss-ease);
+}
+
+.ss-chart__bar--revenue {
+	fill: var(--ss-series-revenue);
+}
+
+.ss-chart__bar.is-active {
+	fill: var(--ss-series-responses-strong);
+}
+
+.ss-chart__bar--revenue.is-active {
+	fill: var(--ss-series-revenue-strong);
+}
+
+.ss-chart.is-static .ss-chart__bar,
+.ss-chart.is-static .ss-chart__peak {
+	animation: none;
+}
+
+.ss-chart__tip,
+.ss-share__tip {
+	position: absolute;
+	z-index: 5;
+	min-width: 120px;
+	padding: var(--ss-space-2) var(--ss-space-3);
+	border-radius: var(--ss-radius-control);
+	background: var(--ss-chart-tip-bg);
+	box-shadow: var(--ss-shadow-pop);
+	color: #fff;
+	font-size: var(--ss-fs-help);
+	line-height: 1.5;
+	white-space: nowrap;
+	pointer-events: none;
+	transform: translate(-50%, calc(-100% - 10px));
+	font-variant-numeric: tabular-nums;
+}
+
+.ss-chart__tip strong,
+.ss-share__tip strong {
+	display: block;
+	margin-bottom: 2px;
+	font-weight: var(--ss-fw-bold);
+}
+
+.ss-chart__tip-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ss-chart__tip-row .ss-swatch {
+	box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- Follow-up answer bars ---------- */
+.ss-answers {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.ss-answer {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ss-space-3);
+	min-height: 36px;
+	padding: 6px var(--ss-space-3);
+	border-radius: var(--ss-radius-control);
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.ss-answer__bar {
+	position: absolute;
+	inset: 0 auto 0 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: var(--ss-seq-100);
+	transform-origin: left center;
+	animation: ss-chart-grow-x 0.6s var(--ss-ease) both;
+	animation-delay: calc(var(--ss-i, 0) * 40ms);
+}
+
+.ss-answer__text {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.ss-answer__count {
+	flex: none;
+	font-size: var(--ss-fs-label);
+	font-weight: var(--ss-fw-bold);
+	color: var(--ss-text);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dashboard widget bars ---------- */
+.sourcesay.ss-widget .ss-widget__chan {
+	display: block;
+}
+
+.sourcesay.ss-widget .ss-widget__track {
+	display: block;
+	height: 6px;
+	margin-top: 6px;
+	border-radius: 0 3px 3px 0;
+	background: var(--ss-chart-track);
+}
+
+.sourcesay.ss-widget .ss-widget__fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--ss-series-revenue);
+	transform-origin: left center;
+	animation: ss-chart-grow-x 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sourcesay.ss-widget .ss-widget__table td {
+	font-variant-numeric: tabular-nums;
+}
+
+.sourcesay.ss-widget .ss-widget__table th .ss-swatch {
+	display: inline-block;
+	margin-right: 4px;
+	vertical-align: -1px;
+}
+
+/* ---------- Motion ---------- */
+@keyframes ss-chart-grow-x {
+
+	from {
+		transform: scaleX(0);
+	}
+}
+
+@keyframes ss-chart-grow-y {
+
+	from {
+		transform: scaleY(0);
+	}
+}
+
+@keyframes ss-chart-fade {
+
+	from {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.ss-share__seg,
+	.ss-dual__fill,
+	.ss-chart__bar,
+	.ss-chart__peak,
+	.ss-answer__bar,
+	.sourcesay.ss-widget .ss-widget__fill {
+		animation: none;
+		transition: none;
+	}
+}
+
+/* ---------- Windows high contrast: marks keep their shape, colour comes from the system ---------- */
+@media (forced-colors: active) {
+
+	.ss-share__seg,
+	.ss-swatch,
+	.ss-dual__fill,
+	.sourcesay.ss-widget .ss-widget__fill {
+		background: CanvasText;
+		forced-color-adjust: none;
+	}
+
+	.ss-dual__fill--revenue,
+	.ss-swatch:not(.ss-swatch--responses, .ss-share__item .ss-swatch) {
+		background: Highlight;
+	}
+
+	.ss-dual__track,
+	.sourcesay.ss-widget .ss-widget__track {
+		border: 1px solid CanvasText;
+	}
+
+	.ss-chart__bar,
+	.ss-chart__bar--revenue {
+		fill: CanvasText;
+	}
+
+	.ss-chart__bar.is-active {
+		fill: Highlight;
+	}
+
+	.ss-chart__grid,
+	.ss-chart__base {
+		stroke: GrayText;
+	}
+
+	.ss-chart__axis,
+	.ss-chart__peak,
+	.ss-chart__empty {
+		fill: CanvasText;
+	}
+
+	.ss-answer__bar {
+		border: 1px solid CanvasText;
+	}
+}
+
+/* Channel icons in the Channels table take the channel's chart colour (same as the share bar). */
+.ss-app .ss-chan-table .ss-chan__icon.ss-chan__icon--cat {
+	background: color-mix(in srgb, var(--ss-c) 13%, #fff);
+	color: var(--ss-c);
+}
