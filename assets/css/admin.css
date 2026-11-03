@@ -3,7 +3,6 @@
  * SwiftWebDev design system: components mirror the SwiftWebDev Dashboard plugin.
  * Every value comes from tokens.css; everything is scoped to .ss-app.
  */
-@import url("tokens.css");
 
 /* ---------- Base ---------- */
 .ss-app *,

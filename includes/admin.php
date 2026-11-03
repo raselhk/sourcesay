@@ -80,7 +80,8 @@ function sourcesay_admin_assets( $hook ) {
 		return;
 	}
 	if ( file_exists( SOURCESAY_PATH . 'assets/css/admin.css' ) ) {
-		wp_enqueue_style( 'sourcesay-admin', SOURCESAY_URL . 'assets/css/admin.css', array(), sourcesay_asset_version( 'assets/css/admin.css' ) );
+		wp_enqueue_style( 'sourcesay-tokens', SOURCESAY_URL . 'assets/css/tokens.css', array(), sourcesay_asset_version( 'assets/css/tokens.css' ) );
+		wp_enqueue_style( 'sourcesay-admin', SOURCESAY_URL . 'assets/css/admin.css', array( 'sourcesay-tokens' ), sourcesay_asset_version( 'assets/css/admin.css' ) );
 		wp_enqueue_style( 'sourcesay-charts', SOURCESAY_URL . 'assets/css/charts.css', array( 'sourcesay-admin' ), sourcesay_asset_version( 'assets/css/charts.css' ) );
 	}
 	if ( ! file_exists( SOURCESAY_PATH . 'assets/js/admin.js' ) ) {
