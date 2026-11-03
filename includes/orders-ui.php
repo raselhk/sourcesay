@@ -100,7 +100,12 @@ function sourcesay_origin_html( $order ) {
 	}
 	$kind = isset( $labels[ $type ] ) ? $labels[ $type ] : $type;
 	if ( in_array( $type, array( 'typein', 'admin', 'pos', 'mobile_app' ), true ) || '' === $source || '(direct)' === $source ) {
-		$icons = array( 'typein' => 'globe', 'admin' => 'gear', 'pos' => 'storefront', 'mobile_app' => 'phone' );
+		$icons = array(
+			'typein'     => 'globe',
+			'admin'      => 'gear',
+			'pos'        => 'storefront',
+			'mobile_app' => 'phone',
+		);
 		$name  = '' !== $kind ? $kind : $source;
 		return '<span class="ss-chip">' . sourcesay_logo_html( '', isset( $icons[ $type ] ) ? $icons[ $type ] : 'globe' ) . '<span>' . esc_html( $name ) . '</span></span>';
 	}
