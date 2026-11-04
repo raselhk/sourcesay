@@ -199,3 +199,48 @@ function sourcesay_sync_order( $order_id ) {
 add_action( 'woocommerce_order_status_changed', 'sourcesay_sync_order', 20 );
 add_action( 'woocommerce_order_refunded', 'sourcesay_sync_order', 20 );
 add_action( 'woocommerce_update_order', 'sourcesay_sync_order', 20 );
+// Trashed orders keep their answer but stop counting (status "trash"); restoring brings it back.
+add_action( 'woocommerce_trash_order', 'sourcesay_sync_order', 20 );
+add_action( 'woocommerce_untrash_order', 'sourcesay_sync_order', 20 );
+
+/**
+ * Legacy (post) order storage: trash and restore arrive as post events.
+ *
+ * @param int $post_id Post id.
+ * @return void
+ */
+function sourcesay_sync_order_post( $post_id ) {
+	if ( in_array( get_post_type( $post_id ), wc_get_order_types(), true ) ) {
+		sourcesay_sync_order( $post_id );
+	}
+}
+add_action( 'trashed_post', 'sourcesay_sync_order_post', 20 );
+add_action( 'untrashed_post', 'sourcesay_sync_order_post', 20 );
+
+/**
+ * A permanently deleted order takes its answer with it, so reports never count an order that no longer exists.
+ *
+ * @param int $order_id Order id.
+ * @return void
+ */
+function sourcesay_delete_order_response( $order_id ) {
+	global $wpdb;
+	if ( $wpdb->delete( sourcesay_table(), array( 'order_id' => (int) $order_id ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		sourcesay_flush_report_cache();
+	}
+}
+add_action( 'woocommerce_delete_order', 'sourcesay_delete_order_response', 20 );
+
+/**
+ * Legacy (post) order storage: permanent delete of an order post.
+ *
+ * @param int     $post_id Post id.
+ * @param WP_Post $post    Deleted post (WP 5.5+).
+ * @return void
+ */
+function sourcesay_delete_order_post( $post_id, $post = null ) {
+	if ( $post instanceof WP_Post && in_array( $post->post_type, wc_get_order_types(), true ) ) {
+		sourcesay_delete_order_response( $post_id );
+	}
+}
+add_action( 'deleted_post', 'sourcesay_delete_order_post', 20, 2 );
