@@ -109,8 +109,9 @@ function sourcesay_admin_assets( $hook ) {
 			'version'        => SOURCESAY_VERSION,
 			'wcSourceLabels' => sourcesay_wc_source_labels(),
 			// Pro promo card (bottom of Reports): hidden when Pro is active or dismissed in the last 90 days.
+			// ponytail: off until Pro is on sale (no /sourcesay-pro/ page yet); flip back to the dismissal check at Pro launch.
 			'promo'          => array(
-				'show'   => ! defined( 'SOURCESAY_PRO_VERSION' ) && ! sourcesay_is_dismissed( 'pro_card' ),
+				'show'   => false,
 				'proUrl' => 'https://swiftwebdev.com/sourcesay-pro/',
 			),
 		)
@@ -131,7 +132,7 @@ function sourcesay_action_links( $links ) {
 add_filter( 'plugin_action_links_' . plugin_basename( SOURCESAY_FILE ), 'sourcesay_action_links' );
 
 /**
- * "Docs" and "Pro" links under the plugin description on the Plugins screen.
+ * "Docs" link under the plugin description on the Plugins screen.
  *
  * @param array  $links Row meta links.
  * @param string $file  Plugin basename.
@@ -142,9 +143,6 @@ function sourcesay_row_meta( $links, $file ) {
 		return $links;
 	}
 	$links[] = '<a href="' . esc_url( 'https://swiftwebdev.com/sourcesay/docs/' ) . '" target="_blank" rel="noopener">' . esc_html__( 'Docs', 'sourcesay' ) . '</a>';
-	if ( ! defined( 'SOURCESAY_PRO_VERSION' ) ) {
-		$links[] = '<a href="' . esc_url( 'https://swiftwebdev.com/sourcesay-pro/' ) . '" target="_blank" rel="noopener">' . esc_html__( 'SourceSay Pro', 'sourcesay' ) . '</a>';
-	}
 	return $links;
 }
 add_filter( 'plugin_row_meta', 'sourcesay_row_meta', 10, 2 );

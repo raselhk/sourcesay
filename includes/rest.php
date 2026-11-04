@@ -78,7 +78,8 @@ function sourcesay_rest_admin_permission() {
 }
 
 /**
- * Public route permission: the order key, then the rate limit (only valid keys count).
+ * Public route permission: the order key only. Kept side-effect free because WordPress
+ * calls it again for the Allow header; the rate limit lives in the callback.
  *
  * @param WP_REST_Request $request Request.
  * @return true|WP_Error
@@ -88,9 +89,6 @@ function sourcesay_rest_response_permission( $request ) {
 	$key   = $request->get_param( 'order_key' );
 	if ( ! $order || ! is_string( $key ) || '' === $key || ! hash_equals( (string) $order->get_order_key(), $key ) ) {
 		return new WP_Error( 'sourcesay_forbidden', __( 'Invalid order.', 'sourcesay' ), array( 'status' => 403 ) );
-	}
-	if ( sourcesay_rate_limited( $order->get_id() ) ) {
-		return new WP_Error( 'sourcesay_rate_limited', __( 'Too many requests. Please try again later.', 'sourcesay' ), array( 'status' => 429 ) );
 	}
 	return true;
 }
@@ -102,6 +100,10 @@ function sourcesay_rest_response_permission( $request ) {
  * @return WP_REST_Response|WP_Error
  */
 function sourcesay_rest_response( $request ) {
+	$order = wc_get_order( absint( $request->get_param( 'order_id' ) ) );
+	if ( sourcesay_rate_limited( $order->get_id() ) ) {
+		return new WP_Error( 'sourcesay_rate_limited', __( 'Too many requests. Please try again later.', 'sourcesay' ), array( 'status' => 429 ) );
+	}
 	$settings = sourcesay_get_settings();
 	$ok       = new WP_REST_Response(
 		array(
@@ -114,7 +116,6 @@ function sourcesay_rest_response( $request ) {
 	if ( '' !== (string) $request->get_param( 'ss_website' ) ) {
 		return $ok;
 	}
-	$order  = wc_get_order( absint( $request->get_param( 'order_id' ) ) );
 	$result = sourcesay_save_response(
 		$order,
 		(string) $request->get_param( 'answer_id' ),
@@ -267,9 +268,9 @@ function sourcesay_get_status() {
 	}
 
 	$table = sourcesay_table();
-	$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 0 AND answer_id <> '__skip'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-	$last  = $wpdb->get_var( "SELECT MAX(created_at) FROM {$table} WHERE is_test = 0 AND answer_id <> '__skip'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-	$tresp = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_test = 1" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE is_test = 0 AND answer_id <> '__skip'", $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$last  = $wpdb->get_var( $wpdb->prepare( "SELECT MAX(created_at) FROM %i WHERE is_test = 0 AND answer_id <> '__skip'", $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$tresp = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE is_test = 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$rep   = sourcesay_get_report();
 	$tests = wc_get_orders(
 		array(

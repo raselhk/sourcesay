@@ -1,5 +1,5 @@
 === SourceSay ===
-Contributors: swiftwebdev
+Contributors: raselhk
 Tags: woocommerce, attribution, survey, marketing, analytics
 Requires at least: 6.5
 Tested up to: 7.1
@@ -38,10 +38,6 @@ The survey appears on the order confirmation page (and, optionally, on the order
 * Private order note ("Customer said: Instagram"), orders list search by answer, and a "How they found you" section on customer profiles.
 * Multi-currency stores: revenue is reported in your store currency (Aelia, WooPayments Multi-Currency, CURCY and WPML/WooCommerce Multilingual rates are used when present).
 * WPML and Polylang: question, answers, follow-ups and thank-you text can be translated.
-
-= SourceSay Pro =
-
-Everything above is free, with unlimited responses. SourceSay Pro is an optional add-on for stores that want more: multi-question surveys with branching and NPS, a report that compares what customers said with what WooCommerce tracked, lifetime value by channel, and sending answers to GA4, Meta, Klaviyo and FluentCRM. Learn more at https://swiftwebdev.com/sourcesay-pro/
 
 == Installation ==
 
