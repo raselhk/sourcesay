@@ -1,15 +1,15 @@
-=== SourceSay ===
+=== SourceSay – How Did You Hear About Us Post-Purchase Survey for WooCommerce ===
 Contributors: raselhk
-Tags: woocommerce, attribution, survey, marketing, analytics
+Tags: how did you hear about us, post-purchase survey, attribution, woocommerce, survey
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Ask customers how they found you right after checkout and see which channels bring revenue.
+Ask "How did you hear about us?" after checkout. A post-purchase attribution survey that shows revenue and AOV by channel for WooCommerce.
 
 == Description ==
 
@@ -41,7 +41,7 @@ The survey appears on the order confirmation page (and, optionally, on the order
 
 = SourceSay Pro =
 
-Everything above is free, with unlimited responses. SourceSay Pro is an optional add-on for stores that want more: multi-question surveys with branching and NPS, a report that compares what customers said with what WooCommerce tracked, lifetime value by channel, and sending answers to GA4, Meta, Klaviyo and FluentCRM. Learn more at https://swiftwebdev.com/sourcesay-pro/
+Everything above is free, with unlimited responses. SourceSay Pro is an optional add-on for stores that want more: multi-question surveys with branching and NPS, a report that compares what customers said with what WooCommerce tracked, lifetime value by channel, and sending answers to GA4, Meta, Klaviyo and FluentCRM. Learn more at https://swiftwebdev.com/sourcesay-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=sourcesay
 
 == Installation ==
 
@@ -50,6 +50,22 @@ Everything above is free, with unlimited responses. SourceSay Pro is an optional
 3. Go to WooCommerce > SourceSay to adjust the question and answers.
 
 == Frequently Asked Questions ==
+
+= Is this a checkout field? =
+
+No. Unlike a "Where did you hear about us?" field at checkout, SourceSay asks after payment, on the order confirmation page. Customers never see an extra field before they pay, so it cannot cost you sales.
+
+= Why does WooCommerce Order Attribution show Direct or Unknown? =
+
+Order Attribution can only record the last click it sees. A customer who heard about you on a podcast, from a friend or in an AI chat and then typed your address shows up as Direct, and missing tracking data shows as Unknown. SourceSay asks the customer instead, and the Reports screen puts both side by side.
+
+= Should I ask "How did you hear about us?" or "Where did you hear about us?" =
+
+Either works. The question text is fully editable on the Survey tab, along with every answer option and its follow-up question.
+
+= Is SourceSay an alternative to Fairing or KnoCommerce? =
+
+Fairing and KnoCommerce are post-purchase survey apps for Shopify. SourceSay brings the same kind of attribution survey to WooCommerce: unlimited responses in the free plugin, and the data stays in your own store database.
 
 = Where does the survey appear? =
 
@@ -123,6 +139,9 @@ Nothing is deleted unless you turn on "Delete all data on uninstall" in Settings
 SourceSay stores the customer's answer, the optional follow-up and "Other" text, the order total, currency, status, whether the customer ordered before, and the WooCommerce tracked source. All data stays in your own WordPress database. No data is sent to external servers, no external scripts, fonts or images are loaded, and there is no tracking. The plugin integrates with the WordPress personal data export and erase tools: erasing blanks the free text and unlinks the customer account. You can also set an automatic retention period in Settings.
 
 == Changelog ==
+
+= 1.0.2 =
+* Listing: clearer plugin name, tags, short description and FAQ. No changes to how the plugin works.
 
 = 1.0.1 =
 * The optional SourceSay Pro add-on is now listed: a dismissible card at the bottom of Reports and a link on the Plugins screen. Everything in the free plugin stays free.
