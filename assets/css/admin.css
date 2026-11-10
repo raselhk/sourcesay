@@ -3687,6 +3687,76 @@ body:has(.ss-app) #wpfooter {
 	}
 }
 
+/* ---------- Review request (bottom of Reports, once, after the first answer) ---------- */
+/* Quiet on purpose: a status-card row with the logo mark on a green "answers are in" tile, small buttons. */
+.ss-app .ss-review {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: var(--ss-space-2) var(--ss-space-4);
+	align-items: center;
+	padding: var(--ss-space-4) var(--ss-card-pad);
+	border: var(--ss-border-w) solid var(--ss-tile-green);
+	border-radius: var(--ss-radius-card);
+	background: var(--ss-card);
+	box-shadow: var(--ss-shadow-card);
+}
+
+.ss-review__mark {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	background: var(--ss-tile-green);
+}
+
+.ss-review__mark img {
+	display: block;
+	width: 28px;
+	height: 28px;
+}
+
+.ss-review__main {
+	min-width: 0;
+}
+
+.ss-app .ss-review__title {
+	margin: 0;
+	font-size: var(--ss-fs-body);
+	font-weight: var(--ss-fw-bold);
+	line-height: 1.35;
+	color: var(--ss-text);
+}
+
+.ss-app .ss-review__text {
+	max-width: 62ch;
+	margin: 2px 0 0;
+	font-size: var(--ss-fs-body);
+	line-height: var(--ss-lh);
+	color: var(--ss-text-2);
+}
+
+.ss-review__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--ss-space-1) var(--ss-space-2);
+}
+
+@media (max-width: 782px) {
+
+	.ss-app .ss-review {
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: start;
+	}
+
+	.ss-review__actions {
+		grid-column: 1 / -1;
+		justify-content: flex-start;
+	}
+}
+
 /* ---------- Entrance motion ---------- */
 /* One orchestrated moment: on a tab change or a freshly loaded report, blocks rise in order (60ms stagger,
    ease-out on arrival), KPI tiles settle with a light spring. Transform + opacity only; off with reduced motion. */

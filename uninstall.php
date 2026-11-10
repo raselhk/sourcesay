@@ -25,7 +25,9 @@ foreach ( array( '_sourcesay_answer_id', '_sourcesay_test', '_sourcesay_note_id'
 		$wpdb->delete( $sourcesay_hpos_meta, array( 'meta_key' => $sourcesay_meta_key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 	}
 }
-delete_metadata( 'user', 0, 'sourcesay_dismissed_pro_card', '', true );
+foreach ( array( 'pro_card', 'review', 'review_later' ) as $sourcesay_dismiss_key ) {
+	delete_metadata( 'user', 0, 'sourcesay_dismissed_' . $sourcesay_dismiss_key, '', true );
+}
 
 delete_option( 'sourcesay_settings' );
 delete_option( 'sourcesay_db_version' );

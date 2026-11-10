@@ -428,12 +428,16 @@ function sourcesay_rest_delete_test_orders() {
 }
 
 /**
- * Dismissible notices/cards the current user can hide (key => days hidden).
+ * Dismissible notices/cards the current user can hide (key => days hidden, 0 = for good).
  *
  * @return int[]
  */
 function sourcesay_dismissible() {
-	return array( 'pro_card' => 90 );
+	return array(
+		'pro_card'     => 90,
+		'review'       => 0,
+		'review_later' => 30,
+	);
 }
 
 /**
@@ -448,7 +452,7 @@ function sourcesay_is_dismissed( $key ) {
 		return false;
 	}
 	$at = (int) get_user_meta( get_current_user_id(), 'sourcesay_dismissed_' . $key, true );
-	return $at && ( time() - $at ) < $items[ $key ] * DAY_IN_SECONDS;
+	return $at && ( ! $items[ $key ] || ( time() - $at ) < $items[ $key ] * DAY_IN_SECONDS );
 }
 
 /**

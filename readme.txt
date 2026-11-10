@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Nothing is deleted unless you turn on "Delete all data on uninstall" in Settings
 SourceSay stores the customer's answer, the optional follow-up and "Other" text, the order total, currency, status, whether the customer ordered before, and the WooCommerce tracked source. All data stays in your own WordPress database. No data is sent to external servers, no external scripts, fonts or images are loaded, and there is no tracking. The plugin integrates with the WordPress personal data export and erase tools: erasing blanks the free text and unlinks the customer account. You can also set an automatic retention period in Settings.
 
 == Changelog ==
+
+= 1.0.3 =
+* Reports: once your first customer answers arrive, a small card asks if you would like to leave a review on WordPress.org. It shows once, on the SourceSay Reports screen only, and you can hide it for good or for 30 days.
+* Setup and Reports: "Turn on my survey" is now the main button whenever the survey is off. Finishing setup without turning it on is still possible.
+* Reports: when the survey is on but no answers have arrived yet, Reports explains how to see it working (place a test order, then look at the thank-you page) and links to your shop.
 
 = 1.0.2 =
 * Listing: clearer plugin name, tags, short description and FAQ. No changes to how the plugin works.

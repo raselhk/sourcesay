@@ -1370,10 +1370,52 @@
 			el( 'section', { class: 'ss-card' }, howToRead() ),
 		];
 		add( body, applyHook( 'sourcesay.reports.cards', cards, { report: rep, range: S.range, ui: UI } ) );
-		const promo = proCard();
+		// One card at the bottom at most: the review request wins while it is due (the server never sets both).
+		const promo = reviewCard() || proCard();
 		if ( promo ) {
 			body.appendChild( promo );
 		}
+	}
+
+	/*
+	 * One-time review request: Reports only, after the first real answer (server sets review.show).
+	 * No rating is suggested and nothing is offered in return. "Leave a review" and "I already did" hide it for good;
+	 * "Maybe later" hides it for 30 days.
+	 */
+	function reviewCard() {
+		const r = cfg.review || {};
+		const url = String( r.url || '' );
+		if ( ! r.show || ! /^https:\/\//.test( url ) ) {
+			return null;
+		}
+		const card = el( 'section', { class: 'ss-review', 'aria-labelledby': 'ss-review-title' },
+			el( 'span', { class: 'ss-review__mark' }, cfg.logo ? el( 'img', { src: cfg.logo, alt: '', width: 28, height: 28 } ) : ico( 'responses' ) ),
+			el( 'div', { class: 'ss-review__main' },
+				el( 'h2', { class: 'ss-review__title', id: 'ss-review-title', text: __( 'Your first answers are in', 'sourcesay' ) } ),
+				el( 'p', { class: 'ss-review__text', text: __( 'If SourceSay is useful to you, a short review on WordPress.org helps other store owners find it.', 'sourcesay' ) } )
+			),
+			el( 'div', { class: 'ss-review__actions' },
+				el( 'a', { class: 'ss-btn ss-btn--primary ss-btn--sm', href: url, target: '_blank', rel: 'noopener', on: { click: () => hideReview( card, 'review', null ) } }, __( 'Leave a review', 'sourcesay' ), ico( 'external' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', text: __( 'Maybe later', 'sourcesay' ), on: { click: () => hideReview( card, 'review_later', __( 'We will ask again in 30 days', 'sourcesay' ) ) } } ),
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary ss-btn--sm', text: __( 'I already did', 'sourcesay' ), on: { click: () => hideReview( card, 'review', __( 'Thank you. We will not ask again.', 'sourcesay' ) ) } } )
+			)
+		);
+		return card;
+	}
+
+	function hideReview( card, key, msg ) {
+		cfg.review.show = false;
+		const prev = card.previousElementSibling;
+		// Let the link open its tab before the card leaves the page.
+		setTimeout( () => card.remove(), 0 );
+		const sum = prev && prev.querySelector( 'summary' );
+		if ( msg && sum ) {
+			sum.focus();
+		}
+		if ( msg ) {
+			toast( 'info', msg );
+		}
+		api( '/admin/dismiss', { method: 'POST', data: { key } } ).catch( ( err ) => toast( 'error', errText( err ) ) );
 	}
 
 	/* SourceSay Pro card: Reports only, dismissible, hidden when Pro is active (server sets promo.show). */
@@ -1493,7 +1535,7 @@
 						toast( 'success', __( 'Your survey is on. Customers will see it after their next order.', 'sourcesay' ) );
 					}
 				} );
-			} } }, ico( 'check' ), __( 'Turn on survey', 'sourcesay' ) );
+			} } }, ico( 'check' ), __( 'Turn on my survey', 'sourcesay' ) );
 			return el( 'div', { class: 'ss-card' },
 				el( 'div', { class: 'ss-empty' },
 					el( 'span', { class: 'ss-empty__icon' }, ico( 'responses' ) ),
@@ -1512,20 +1554,20 @@
 			);
 		}
 		const text = paid
-			? sprintf( /* translators: %s: number of paid orders */ _n( 'There was %s paid order in this range, but nobody has answered yet.', 'There were %s paid orders in this range, but nobody has answered yet.', paid, 'sourcesay' ), fmtNum( paid ) )
-			: __( 'Answers show up here as soon as customers reply on the order confirmation page. No numbers are shown until real answers arrive.', 'sourcesay' );
+			? sprintf( /* translators: %s: number of paid orders */ _n( 'Your survey is on. There was %s paid order in this range, but nobody has answered yet.', 'Your survey is on. There were %s paid orders in this range, but nobody has answered yet.', paid, 'sourcesay' ), fmtNum( paid ) )
+			: __( 'Your survey is on. To see it working, place an order in your shop yourself, then look at the thank-you page.', 'sourcesay' );
 		return el( 'div', { class: 'ss-card' },
 			el( 'div', { class: 'ss-empty' },
 				el( 'span', { class: 'ss-empty__icon' }, ico( 'responses' ) ),
 				el( 'h2', { class: 'ss-empty__title', text: __( 'No answers yet', 'sourcesay' ) } ),
 				el( 'p', { class: 'ss-empty__text', text } ),
 				el( 'ol', { class: 'ss-steps' },
-					el( 'li', { text: __( 'Place a test order in your store, for example with the Cash on delivery or Check payments method.', 'sourcesay' ) } ),
-					el( 'li', { text: __( 'Answer the question on the order confirmation page.', 'sourcesay' ) } ),
+					el( 'li', { text: __( 'Open your shop and place a test order, for example with the Cash on delivery or Check payments method.', 'sourcesay' ) } ),
+					el( 'li', { text: __( 'After checkout, look at the thank-you page. The question appears there. Pick an answer.', 'sourcesay' ) } ),
 					el( 'li', { text: __( 'Come back here. The answer appears once the order is paid (Processing or Completed).', 'sourcesay' ) } )
 				),
 				el( 'div', { class: 'ss-empty__actions' },
-					el( 'a', { class: 'ss-btn ss-btn--primary', href: siteHome(), target: '_blank', rel: 'noopener' }, ico( 'bag' ), __( 'Open your store', 'sourcesay' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
+					el( 'a', { class: 'ss-btn ss-btn--primary', href: siteHome(), target: '_blank', rel: 'noopener' }, ico( 'bag' ), __( 'Open your shop', 'sourcesay' ), el( 'span', { class: 'ss-sr', text: __( '(opens in a new tab)', 'sourcesay' ) } ) ),
 					el( 'a', { class: 'ss-btn ss-btn--secondary', href: '#survey' }, ico( 'eye' ), __( 'Preview the survey', 'sourcesay' ) ),
 					cfg.ordersUrl ? el( 'a', { class: 'ss-btn ss-btn--tertiary', href: cfg.ordersUrl, text: __( 'View orders', 'sourcesay' ) } ) : null
 				)
@@ -2026,7 +2068,7 @@
 					toast( 'success', __( 'Your survey is on. Customers will see it after their next order.', 'sourcesay' ) );
 				}
 			} );
-		} } }, ico( 'check' ), __( 'Turn on survey', 'sourcesay' ) );
+		} } }, ico( 'check' ), __( 'Turn on my survey', 'sourcesay' ) );
 		return el( 'section', { class: 'ss-status-card is-off', 'aria-label': __( 'Survey status', 'sourcesay' ) },
 			el( 'span', { class: 'ss-status-card__icon' }, ico( 'eye' ) ),
 			el( 'div', { class: 'ss-status-card__main' },
@@ -2426,7 +2468,7 @@
 		let actions;
 		if ( off ) {
 			actions = [
-				el( 'button', { type: 'button', class: 'ss-btn ss-btn--secondary', text: firstRun ? __( 'Finish later, keep it off', 'sourcesay' ) : __( 'Close, keep it off', 'sourcesay' ), on: { click: () => finishSetup( firstRun ? __( 'Setup saved. Your survey stays off until you turn it on from Reports.', 'sourcesay' ) : null ) } } ),
+				el( 'button', { type: 'button', class: 'ss-btn ss-btn--tertiary', text: firstRun ? __( 'Finish later, keep it off', 'sourcesay' ) : __( 'Close, keep it off', 'sourcesay' ), on: { click: () => finishSetup( firstRun ? __( 'Setup saved. Your survey stays off until you turn it on from Reports.', 'sourcesay' ) : null ) } } ),
 				el( 'button', { type: 'button', class: 'ss-btn ss-btn--primary', on: { click: ( e ) => setupTurnOn( e.currentTarget ) } }, ico( 'check' ), __( 'Turn on my survey', 'sourcesay' ) ),
 			];
 		} else {

@@ -89,6 +89,7 @@ function sourcesay_admin_assets( $hook ) {
 	}
 	wp_enqueue_script( 'sourcesay-admin', SOURCESAY_URL . 'assets/js/admin.js', array( 'wp-i18n', 'wp-api-fetch', 'wp-hooks' ), sourcesay_asset_version( 'assets/js/admin.js' ), true );
 	wp_set_script_translations( 'sourcesay-admin', 'sourcesay' );
+	$review = sourcesay_review_due();
 	wp_localize_script(
 		'sourcesay-admin',
 		'sourcesayAdmin',
@@ -108,15 +109,35 @@ function sourcesay_admin_assets( $hook ) {
 			'logo'           => SOURCESAY_URL . 'assets/img/logo-mark.svg',
 			'version'        => SOURCESAY_VERSION,
 			'wcSourceLabels' => sourcesay_wc_source_labels(),
-			// Pro promo card (bottom of Reports): hidden when Pro is active or dismissed in the last 90 days.
+			// One-time review request (bottom of Reports) once real answers exist; it replaces the Pro card while due.
+			'review'         => array(
+				'show' => $review,
+				'url'  => 'https://wordpress.org/support/plugin/sourcesay/reviews/#new-post',
+			),
+			// Pro promo card (bottom of Reports): hidden when Pro is active, dismissed in the last 90 days, or the review card shows.
 			'promo'          => array(
-				'show'   => ! defined( 'SOURCESAY_PRO_VERSION' ) && ! sourcesay_is_dismissed( 'pro_card' ),
+				'show'   => ! $review && ! defined( 'SOURCESAY_PRO_VERSION' ) && ! sourcesay_is_dismissed( 'pro_card' ),
 				'proUrl' => 'https://swiftwebdev.com/sourcesay-pro/',
 			),
 		)
 	);
 }
 add_action( 'admin_enqueue_scripts', 'sourcesay_admin_assets' );
+
+/**
+ * Whether the one-time review request is due for the current user: they manage the store,
+ * at least one real answer exists (test orders and skips never count), and they have not
+ * hidden it for good or snoozed it in the last 30 days.
+ *
+ * @return bool
+ */
+function sourcesay_review_due() {
+	if ( ! current_user_can( 'manage_woocommerce' ) || sourcesay_is_dismissed( 'review' ) || sourcesay_is_dismissed( 'review_later' ) ) {
+		return false;
+	}
+	global $wpdb;
+	return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE is_test = 0 AND answer_id <> '__skip' LIMIT 1", sourcesay_table() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+}
 
 /**
  * "Reports" link on the plugins list.
