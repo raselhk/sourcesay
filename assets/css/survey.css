@@ -1,5 +1,5 @@
 /*
- * SourceSay thank-you survey. Inherits the theme font and colours.
+ * SourceSay thank-you survey. Inherits the theme font and colors.
  * Accent: --ss-accent (set inline from settings) > theme primary preset > currentColor.
  */
 
@@ -61,7 +61,7 @@
 	margin: 0.375em 0 0;
 	font-size: 0.9375em;
 	line-height: 1.5;
-	opacity: 1; /* theme body colour as is: any fade drops grey theme text (Storefront #6d6d6d) below AA */
+	opacity: 1; /* theme body color as is: any fade drops gray theme text (Storefront #6d6d6d) below AA */
 }
 
 /* Honeypot: off-screen, never focusable. */
@@ -220,7 +220,7 @@
 }
 
 .ss-survey .ss-input:focus {
-	background: transparent; /* themes tint focused inputs grey */
+	background: transparent; /* themes tint focused inputs gray */
 	box-shadow: none;
 	border-color: var(--ss-a);
 	outline: 2px solid var(--ss-a);
@@ -237,7 +237,7 @@
 	padding: 0.5em 1.375em;
 	border: 0;
 	border-radius: 999px;
-	background: var(--ss-a); /* currentColor fallback resolves to the text colour here */
+	background: var(--ss-a); /* currentColor fallback resolves to the text color here */
 	color: inherit;
 	font: inherit;
 	font-weight: 600;
@@ -317,7 +317,7 @@
 	text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 	text-decoration-thickness: 1px;
 	text-underline-offset: 0.2em;
-	opacity: 1; /* AA on grey theme text; the underline marks it as secondary */
+	opacity: 1; /* AA on gray theme text; the underline marks it as secondary */
 	cursor: pointer;
 	transition: opacity 0.15s ease, text-decoration-color 0.15s ease;
 	touch-action: manipulation;
@@ -348,7 +348,7 @@
 
 .ss-survey .ss-done--quiet {
 	gap: 0.5rem;
-	opacity: 1; /* readable message: AA on grey theme text */
+	opacity: 1; /* readable message: AA on gray theme text */
 }
 
 .ss-survey .ss-done--quiet .ss-done__icon {

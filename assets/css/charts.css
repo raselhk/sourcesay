@@ -1,9 +1,9 @@
 /*
  * SourceSay charts: trend chart, channel share bar, answers vs revenue bars,
- * follow-up answer bars. The Dashboard widget reuses the share bar and the channel colours.
+ * follow-up answer bars. The Dashboard widget reuses the share bar and the channel colors.
  *
  * Palette built from the SwiftWebDev brand (blue, orange, green family) and checked
- * with the dataviz validator on white: lightness band, chroma floor, colour-blind
+ * with the dataviz validator on white: lightness band, chroma floor, color-blind
  * separation (worst adjacent pair dE 12.7), normal-vision floor (20.7) and 3:1 contrast all pass.
  * Slots are assigned in this fixed order and never cycled; a 9th channel folds into "others".
  */
@@ -30,7 +30,7 @@
 	--ss-seq-600: #3a44d6;
 	--ss-seq-700: #2a31a3;
 
-	/* Series: the same measure wears the same colour in every chart. */
+	/* Series: the same measure wears the same color in every chart. */
 	--ss-series-responses: var(--ss-cat-1);
 	--ss-series-responses-strong: var(--ss-seq-600);
 	--ss-series-revenue: var(--ss-cat-4);
@@ -408,7 +408,7 @@
 	}
 }
 
-/* ---------- Windows high contrast: marks keep their shape, colour comes from the system ---------- */
+/* ---------- Windows high contrast: marks keep their shape, color comes from the system ---------- */
 @media (forced-colors: active) {
 
 	.ss-share__seg,
@@ -452,7 +452,7 @@
 	}
 }
 
-/* Channel icons in the Channels table take the channel's chart colour (same as the share bar). */
+/* Channel icons in the Channels table take the channel's chart color (same as the share bar). */
 .ss-app .ss-chan-table .ss-chan__icon.ss-chan__icon--cat {
 	background: color-mix(in srgb, var(--ss-c) 13%, #fff);
 	color: var(--ss-c);

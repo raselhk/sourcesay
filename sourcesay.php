@@ -3,7 +3,7 @@
  * Plugin Name:       SourceSay
  * Plugin URI:        https://swiftwebdev.com/sourcesay/
  * Description:       Ask customers how they found you right after checkout and see which channels bring revenue.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SOURCESAY_VERSION', '1.0.0' );
+define( 'SOURCESAY_VERSION', '1.0.1' );
 define( 'SOURCESAY_FILE', __FILE__ );
 define( 'SOURCESAY_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SOURCESAY_URL', plugin_dir_url( __FILE__ ) );

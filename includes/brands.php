@@ -1,6 +1,6 @@
 <?php
 /**
- * Channel logos: real brand marks (assets/brands.svg) in their brand colours, outline icons for everything else.
+ * Channel logos: real brand marks (assets/brands.svg) in their brand colors, outline icons for everything else.
  * Used in the Orders list ("Heard about us" + Origin columns) and the order meta box.
  *
  * @package SourceSay
@@ -71,7 +71,7 @@ function sourcesay_brand_key( $text ) {
 }
 
 /**
- * Logo markup: the brand mark in its colour, or an outline icon (tinted for brands without a shipped mark).
+ * Logo markup: the brand mark in its color, or an outline icon (tinted for brands without a shipped mark).
  *
  * @param string $brand Brand key from sourcesay_brand_key(), or ''.
  * @param string $icon  Outline icon key (icons.svg) used when there is no brand.
@@ -82,7 +82,7 @@ function sourcesay_logo_html( $brand, $icon = 'tag' ) {
 	if ( '' !== $brand && isset( $brands[ $brand ] ) ) {
 		list( , $color, $fallback ) = $brands[ $brand ];
 		$href                       = '' === $fallback ? SOURCESAY_URL . 'assets/brands.svg#ss-b-' . $brand : SOURCESAY_URL . 'assets/icons.svg#ss-i-' . $fallback;
-		// Very light brand colours (Snapchat yellow, Spotify green...) sit on a dark tile so the mark stays visible.
+		// Very light brand colors (Snapchat yellow, Spotify green...) sit on a dark tile so the mark stays visible.
 		$rgb   = sscanf( $color, '#%02x%02x%02x' );
 		$light = ( 0.2126 * $rgb[0] + 0.7152 * $rgb[1] + 0.0722 * $rgb[2] ) > 170;
 		return '<span class="ss-logo' . ( $light ? ' ss-logo--tile' : '' ) . '" style="color:' . esc_attr( $color ) . '" aria-hidden="true"><svg><use href="' . esc_url( $href ) . '"></use></svg></span>';

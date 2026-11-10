@@ -86,11 +86,11 @@ function sourcesay_widget_delta( $cur, $prev, $pts, $base, $prev_text ) {
 }
 
 /**
- * Channel colour slots, same rule as chanColors() in admin.js: rank by answers, then revenue;
- * up to 8 channels own a colour, from the 9th on the smallest fold into the grey "rest".
+ * Channel color slots, same rule as chanColors() in admin.js: rank by answers, then revenue;
+ * up to 8 channels own a color, from the 9th on the smallest fold into the gray "rest".
  *
  * @param array[] $channels Report channels.
- * @return array answer_id => CSS colour.
+ * @return array answer_id => CSS color.
  */
 function sourcesay_widget_colors( $channels ) {
 	$ranked = $channels;
@@ -193,13 +193,13 @@ function sourcesay_dashboard_widget() {
 	}
 	echo '</div>';
 
-	// Top 5 channels by revenue (the report is already sorted that way). They own their Reports colours.
+	// Top 5 channels by revenue (the report is already sorted that way). They own their Reports colors.
 	$colors  = sourcesay_widget_colors( $report['channels'] );
 	$top     = array_slice( $report['channels'], 0, 5 );
 	$answers = max( 1, (int) $totals['responses'] );
 	$max_rev = max( 0.01, max( array_map( 'floatval', wp_list_pluck( $top, 'revenue' ) ) ) );
 
-	// Where answers come from: the top channels in answer order, every other channel folded into one grey block.
+	// Where answers come from: the top channels in answer order, every other channel folded into one gray block.
 	$segs = $top;
 	usort(
 		$segs,

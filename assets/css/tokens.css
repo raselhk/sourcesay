@@ -26,7 +26,7 @@
 
 .sourcesay.ss-app,
 .sourcesay.ss-widget {
-	/* Colour: SwiftWebDev palette (portfolio/logo/swd-tokens.json). Blue is the only action colour. */
+	/* Color: SwiftWebDev palette (portfolio/logo/swd-tokens.json). Blue is the only action color. */
 	--ss-primary: #4f5bff;
 	--ss-primary-hover: #3f49e0;
 	--ss-primary-ink: #3a44d6; /* blue text on tints and the page background (AA everywhere) */

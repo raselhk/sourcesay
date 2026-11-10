@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,10 @@ The survey appears on the order confirmation page (and, optionally, on the order
 * Private order note ("Customer said: Instagram"), orders list search by answer, and a "How they found you" section on customer profiles.
 * Multi-currency stores: revenue is reported in your store currency (Aelia, WooPayments Multi-Currency, CURCY and WPML/WooCommerce Multilingual rates are used when present).
 * WPML and Polylang: question, answers, follow-ups and thank-you text can be translated.
+
+= SourceSay Pro =
+
+Everything above is free, with unlimited responses. SourceSay Pro is an optional add-on for stores that want more: multi-question surveys with branching and NPS, a report that compares what customers said with what WooCommerce tracked, lifetime value by channel, and sending answers to GA4, Meta, Klaviyo and FluentCRM. Learn more at https://swiftwebdev.com/sourcesay-pro/
 
 == Installation ==
 
@@ -119,6 +123,10 @@ Nothing is deleted unless you turn on "Delete all data on uninstall" in Settings
 SourceSay stores the customer's answer, the optional follow-up and "Other" text, the order total, currency, status, whether the customer ordered before, and the WooCommerce tracked source. All data stays in your own WordPress database. No data is sent to external servers, no external scripts, fonts or images are loaded, and there is no tracking. The plugin integrates with the WordPress personal data export and erase tools: erasing blanks the free text and unlinks the customer account. You can also set an automatic retention period in Settings.
 
 == Changelog ==
+
+= 1.0.1 =
+* The optional SourceSay Pro add-on is now listed: a dismissible card at the bottom of Reports and a link on the Plugins screen. Everything in the free plugin stays free.
+* Spelling in the interface and documentation now follows US English (color, recognized, favorite).
 
 = 1.0.0 =
 * Initial release, including the shortcode and block, skip button, new-customers-only audience, previous-period comparison, dashboard widget, order notes and search, multi-currency totals and WPML/Polylang support.

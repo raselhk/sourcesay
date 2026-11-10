@@ -1,6 +1,6 @@
 /* SourceSay Dashboard widget: a compact slice of the Reports screen.
    Tokens and the brand font come from tokens.css (scoped to .sourcesay.ss-widget);
-   channel colours and the share bar come from charts.css. Fits columns from ~300px up. */
+   channel colors and the share bar come from charts.css. Fits columns from ~300px up. */
 #sourcesay_dashboard .inside {
 	margin: 0;
 	padding: 0;
@@ -181,7 +181,7 @@
 	padding-left: 7px;
 }
 
-/* ---------- Share bar (markup and colours from charts.css) ---------- */
+/* ---------- Share bar (markup and colors from charts.css) ---------- */
 .sourcesay.ss-widget .ss-w-share {
 	margin-bottom: var(--ss-space-5);
 }
@@ -224,7 +224,7 @@
 	border-bottom: 0;
 }
 
-/* Logos: brand marks in their own colour; other channels wear their chart colour on a tint (as in Reports). */
+/* Logos: brand marks in their own color; other channels wear their chart color on a tint (as in Reports). */
 .sourcesay.ss-widget .ss-logo {
 	display: grid;
 	place-items: center;

@@ -136,7 +136,7 @@
 		gift: 'present voucher coupon',
 		phone: 'call telephone sales',
 		award: 'trophy prize winner',
-		star: 'influencer creator celebrity favourite',
+		star: 'influencer creator celebrity favorite',
 		megaphone: 'advert advertising promo campaign',
 		tag: 'label sale discount',
 		question: 'other unknown',
@@ -686,7 +686,7 @@
 			e.other = __( 'Add a label for the Other answer.', 'sourcesay' );
 		}
 		if ( d.accent && ! /^#[0-9a-f]{6}$/i.test( d.accent ) ) {
-			e.accent = __( 'Use a hex colour like #4f5bff.', 'sourcesay' );
+			e.accent = __( 'Use a hex color like #4f5bff.', 'sourcesay' );
 		}
 		if ( ! String( d.thank_you || '' ).trim() ) {
 			e.thank_you = __( 'Write a short thank-you message.', 'sourcesay' );
@@ -1688,10 +1688,10 @@
 	}
 
 	/**
-	 * Where answers come from: one 100% bar, one colour per channel, legend with the shares.
-	 * Up to 8 channels get their own colour; from the 9th on the smallest fold into one grey "more" block.
+	 * Where answers come from: one 100% bar, one color per channel, legend with the shares.
+	 * Up to 8 channels get their own color; from the 9th on the smallest fold into one gray "more" block.
 	 */
-	/** Channel key => colour (same rule as the share bar), so a channel looks the same in every chart and icon. */
+	/** Channel key => color (same rule as the share bar), so a channel looks the same in every chart and icon. */
 	function chanColors( chans ) {
 		const ranked = chans.filter( ( c ) => +c.responses > 0 ).sort( ( a, b ) => ( b.responses - a.responses ) || ( b.revenue - a.revenue ) );
 		const keep = ranked.length > 8 ? 7 : 8;
@@ -1703,7 +1703,7 @@
 		if ( ! total ) {
 			return null;
 		}
-		// ponytail: colour slot = answer rank in this range, so a channel can change colour between ranges; pin slots to survey order if owners compare ranges side by side.
+		// ponytail: color slot = answer rank in this range, so a channel can change color between ranges; pin slots to survey order if owners compare ranges side by side.
 		const ranked = chans.filter( ( c ) => +c.responses > 0 ).sort( ( a, b ) => ( b.responses - a.responses ) || ( b.revenue - a.revenue ) );
 		const keep = ranked.length > 8 ? 7 : 8;
 		const parts = ranked.slice( 0, keep ).map( ( c, i ) => ( { label: c.label, n: +c.responses, rev: +c.revenue || 0, color: 'var(--ss-cat-' + ( i + 1 ) + ')' } ) );
@@ -2365,7 +2365,7 @@
 							el( 'p', { class: 'ss-field__help', text: __( 'Rename, reorder, change icons, turn answers off or add a follow-up question.', 'sourcesay' ) } ),
 							answersEditor( true )
 						),
-						el( 'p', { class: 'ss-field__help', text: __( 'Customers can always skip the question. Colours and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
+						el( 'p', { class: 'ss-field__help', text: __( 'Customers can always skip the question. Colors and placement can be changed any time in the Survey tab.', 'sourcesay' ) } )
 					),
 					foot( back( 1 ), next )
 				) ),
@@ -3026,13 +3026,13 @@
 			)
 		);
 
-		const hexInput = el( 'input', { type: 'text', class: 'ss-input', id: 'ss-accent-hex', value: d.accent || '', maxlength: 7, spellcheck: 'false', 'aria-label': __( 'Hex colour', 'sourcesay' ) } );
-		const colourInput = el( 'input', { type: 'color', id: 'ss-accent-picker', value: /^#[0-9a-f]{6}$/i.test( d.accent ) ? d.accent : '#4f5bff', 'aria-label': __( 'Pick a colour', 'sourcesay' ) } );
+		const hexInput = el( 'input', { type: 'text', class: 'ss-input', id: 'ss-accent-hex', value: d.accent || '', maxlength: 7, spellcheck: 'false', 'aria-label': __( 'Hex color', 'sourcesay' ) } );
+		const colorInput = el( 'input', { type: 'color', id: 'ss-accent-picker', value: /^#[0-9a-f]{6}$/i.test( d.accent ) ? d.accent : '#4f5bff', 'aria-label': __( 'Pick a color', 'sourcesay' ) } );
 		const accentErr = errBox( 'accent' );
 		hexInput.setAttribute( 'aria-describedby', accentErr.id );
-		colourInput.addEventListener( 'input', () => {
-			d.accent = colourInput.value;
-			hexInput.value = colourInput.value;
+		colorInput.addEventListener( 'input', () => {
+			d.accent = colorInput.value;
+			hexInput.value = colorInput.value;
 			changed();
 		} );
 		hexInput.addEventListener( 'input', () => {
@@ -3042,7 +3042,7 @@
 			}
 			d.accent = v.toLowerCase();
 			if ( /^#[0-9a-f]{6}$/i.test( v ) ) {
-				colourInput.value = v;
+				colorInput.value = v;
 			}
 			changed();
 		} );
@@ -3050,13 +3050,13 @@
 			S.touched.add( 'accent' );
 			updateErrors();
 		} );
-		const colourRow = el( 'div', { class: 'ss-colour', hidden: ! S.accentCustom }, colourInput, hexInput );
+		const colorRow = el( 'div', { class: 'ss-colour', hidden: ! S.accentCustom }, colorInput, hexInput );
 		const accentName = uid( 'acc' );
 		const accentRadio = ( val, label ) => el( 'label', { class: 'ss-check', style: 'display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer' },
 			el( 'input', { type: 'radio', name: accentName, value: val, checked: ( val === 'custom' ) === S.accentCustom, on: { change: () => {
 				S.accentCustom = val === 'custom';
-				colourRow.hidden = ! S.accentCustom;
-				d.accent = S.accentCustom ? ( /^#[0-9a-f]{6}$/i.test( hexInput.value ) ? hexInput.value : colourInput.value ) : '';
+				colorRow.hidden = ! S.accentCustom;
+				d.accent = S.accentCustom ? ( /^#[0-9a-f]{6}$/i.test( hexInput.value ) ? hexInput.value : colorInput.value ) : '';
 				hexInput.value = d.accent;
 				changed();
 			} } } ),
@@ -3087,10 +3087,10 @@
 					choice( 'list', __( 'List', 'sourcesay' ), lines )
 				),
 				el( 'fieldset', { class: 'ss-field', style: 'border:0;margin:0;padding:0' },
-					el( 'legend', { class: 'ss-field__label', text: __( 'Accent colour', 'sourcesay' ) } ),
+					el( 'legend', { class: 'ss-field__label', text: __( 'Accent color', 'sourcesay' ) } ),
 					accentRadio( 'inherit', __( 'Match my theme', 'sourcesay' ) ),
-					accentRadio( 'custom', __( 'Custom colour', 'sourcesay' ) ),
-					colourRow,
+					accentRadio( 'custom', __( 'Custom color', 'sourcesay' ) ),
+					colorRow,
 					accentErr
 				),
 				textField( { label: __( 'Thank-you message', 'sourcesay' ), value: d.thank_you, max: 120, errKey: 'thank_you', help: __( 'Shown after the customer answers.', 'sourcesay' ), onInput: ( v ) => {
@@ -3106,7 +3106,7 @@
 			widthSeg.querySelectorAll( 'button' ).forEach( ( b, i ) => b.setAttribute( 'aria-pressed', String( ( i === 1 ) === m ) ) );
 			renderPreview();
 		}, true );
-		const previewCard = card( { icon: 'eye', tone: 'cream', title: __( 'Preview', 'sourcesay' ), desc: __( 'Try it: click an answer. Your theme sets the final font and colours.', 'sourcesay' ), actions: widthSeg }, R.preview );
+		const previewCard = card( { icon: 'eye', tone: 'cream', title: __( 'Preview', 'sourcesay' ), desc: __( 'Try it: click an answer. Your theme sets the final font and colors.', 'sourcesay' ), actions: widthSeg }, R.preview );
 
 		R.i18nNote = el( 'div', { class: 'ss-i18n-slot' } );
 		fillI18nNote();
@@ -3207,7 +3207,7 @@
 					option( 'all', __( 'Everyone', 'sourcesay' ), __( 'Every order gets the question until it is answered or skipped, including orders from repeat customers.', 'sourcesay' ) ),
 					option( 'new', __( 'Only first-time customers', 'sourcesay' ), __( 'Customers who already paid for an earlier order are not asked again. Best when you want to know what brings in new customers.', 'sourcesay' ) )
 				),
-				el( 'p', { class: 'ss-field__help', text: __( 'Customers are recognised by their account, or by billing email for guest orders. Test orders always show the survey.', 'sourcesay' ) } )
+				el( 'p', { class: 'ss-field__help', text: __( 'Customers are recognized by their account, or by billing email for guest orders. Test orders always show the survey.', 'sourcesay' ) } )
 			)
 		);
 	}

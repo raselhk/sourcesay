@@ -210,7 +210,7 @@ body:has(.ss-app) #wpfooter {
 }
 
 /* ---------- Page header ---------- */
-/* Hero frame: SwiftWebDev dark panel with soft brand-colour orbs. The one bold moment per screen. */
+/* Hero frame: SwiftWebDev dark panel with soft brand-color orbs. The one bold moment per screen. */
 .ss-page-head {
 	position: relative;
 	isolation: isolate;
@@ -312,7 +312,7 @@ body:has(.ss-app) #wpfooter {
 	padding: var(--ss-card-pad) var(--ss-card-pad) 0;
 }
 
-/* Coloured icon chip (card heads, rows). Tones rotate lavender, mint, peach, cream, yellow; icon uses the tile ink. */
+/* Colored icon chip (card heads, rows). Tones rotate lavender, mint, peach, cream, yellow; icon uses the tile ink. */
 .ss-chip-ico {
 	display: grid;
 	flex: none;
